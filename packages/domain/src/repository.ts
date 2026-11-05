@@ -15,6 +15,8 @@ export class Repository {
   constructor(store:Store,id:()=>string=()=>globalThis.crypto.randomUUID()){this.store=store;this.id=id;}
   plannerUpdate(fn:(planner:import('./planner.ts').PlannerState|undefined,items:Item[],state:State)=>import('./planner.ts').PlannerState):Promise<void>{return this.store.transact(s=>[{...s,planner:fn(s.planner,s.items,s)},undefined]);}
   snapshot():Promise<State>{return this.store.transact(s=>[s,copyState(s)]);}
+  /** Full restore: replaces every stored record and setting with a validated backup in one transaction (all or nothing). */
+  async replaceAll(value:unknown):Promise<number>{const next=validateState(copyState(value as State));return this.store.transact(()=>[next,(next.planner?.objects.length??0)+next.items.length]);}
   async add(input:ItemInput,confirmed=false):Promise<Item>{const created=makeItem({...input,id:this.id()});const item:Item=confirmed?{...created,inboxStatus:'confirmed'}:created;return this.store.transact(s=>{validateRelations(s,item);return [{...s,items:[item,...s.items]},item];});}
   private change(id:string,fn:(item:Item)=>Item):Promise<Item>{return this.store.transact(s=>{const old=s.items.find(x=>x.id===id);if(!old)throw new Error('not_found');const next=fn(old);if(JSON.stringify(next.details)!==JSON.stringify(old.details))validateRelations(s,next,old);return [{...s,items:s.items.map(x=>x.id===id?next:x)},next];});}
   confirm(id:string,version:number,kind:Kind,category:Category):Promise<Item>{return this.change(id,old=>{
