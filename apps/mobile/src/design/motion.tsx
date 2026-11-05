@@ -1,8 +1,8 @@
-import React,{useEffect,useRef,useState} from 'react';
-import {Animated,Easing,Modal,Pressable,View,type StyleProp,type ViewStyle} from 'react-native';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
+import {Animated,Easing,Modal,PanResponder,Pressable,View,type StyleProp,type ViewStyle} from 'react-native';
 import {useApp} from '../context';
 import {useDesignScope,useReducedMotion} from './scope';
-import {easing,motion,spring} from './system';
+import {easing,gestures,motion,spring} from './system';
 
 /**
  * Soft Motion is active only in the Soft Future theme and never inside a frozen zone («Покупки и желания»),
@@ -28,9 +28,26 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
  const {enabled,reduced}=useSoftMotion();
  const [mounted,setMounted]=useState(visible);
  const progress=useRef(new Animated.Value(0)).current;
+ // Drag down to close — only from the top strip of a bottom sheet, so scrolling inside the sheet never conflicts.
+ const drag=useRef(new Animated.Value(0)).current;
+ // The sheet's container fills the window, so the panel's layout y is its top on screen (transforms aside).
+ const panelTop=useRef<number|null>(null);
+ const closeRef=useRef(onRequestClose);closeRef.current=onRequestClose;
+ const dragResponder=useMemo(()=>PanResponder.create({
+  onStartShouldSetPanResponder:()=>false,
+  // start must be in the top strip of the panel (the finger start = current position − distance moved)
+  onMoveShouldSetPanResponder:(_,g)=>{const start=g.moveY-g.dy;return panelTop.current!==null&&start>=panelTop.current-4&&start<=panelTop.current+36&&g.dy>6&&Math.abs(g.dy)>Math.abs(g.dx);},
+  onPanResponderMove:(_,g)=>drag.setValue(Math.max(0,g.dy)),
+  onPanResponderRelease:(_,g)=>{
+   if(g.dy>gestures.sheetDismiss||g.vy>gestures.flingVelocity)closeRef.current();
+   else Animated.spring(drag,{toValue:0,...spring.snappy,useNativeDriver:true}).start();
+  },
+  onPanResponderTerminate:()=>Animated.spring(drag,{toValue:0,...spring.snappy,useNativeDriver:true}).start(),
+ }),[]);
  useEffect(()=>{
   if(!enabled)return;
   if(visible){
+   drag.setValue(0);
    setMounted(true);
    progress.stopAnimation();
    if(reduced)Animated.timing(progress,{toValue:1,duration:motion.press,useNativeDriver:true}).start();
@@ -52,7 +69,9 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
   <View style={{flex:1,justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'}}>
    <Animated.View pointerEvents="none" style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundColor:'rgba(30,26,34,0.34)',opacity:progress}}/>
    <Pressable accessibilityLabel="Закрыть" onPress={onRequestClose} style={{position:'absolute',top:0,left:0,right:0,bottom:0}}/>
-   <Animated.View style={[{width:'100%',opacity:progress,transform:[{translateY:rise},{scale}]},panelStyle]}>{children}</Animated.View>
+   <Animated.View {...(align==='bottom'?dragResponder.panHandlers:{})} onLayout={e=>{panelTop.current=e.nativeEvent.layout.y;}} style={[{width:'100%',opacity:progress,transform:[{translateY:Animated.add(rise,drag)},{scale}]},panelStyle]}>
+    {children}
+   </Animated.View>
   </View>
  </Modal>;
 }

@@ -2,6 +2,7 @@ import {GlassBackdrop} from '../design/glass';
 import {useEffectiveTheme} from '../design/scope';
 import {SoftSheet,useSoftMotion,FadeRise} from '../design/motion';
 import {spring} from '../design/system';
+import {SwipeableRow,useSwipeRow} from '../design/SwipeableRow';
 import {colors} from '../design/tokens';
 import {retiredMealPhotoKeys,ukrainianMealPhotos} from './meal-photos';
 import {goBack} from './navigation';
@@ -38,7 +39,18 @@ export function Primary({children,onPress,quiet=false,disabled=false}:{children:
 export function Input({label,value,onChange,multiline=false,placeholder,number=false,onBlur}:{label?:string;value:string;onChange:(s:string)=>void;multiline?:boolean;placeholder?:string;number?:boolean;onBlur?:()=>void}){const C=usePlannerColors();return <View style={{gap:5}}>{label&&<T size={12}>{label}</T>}<TextInput accessibilityLabel={label??placeholder} value={value} onChangeText={onChange} onBlur={onBlur} multiline={multiline} keyboardType={number?'decimal-pad':'default'} placeholder={placeholder} placeholderTextColor={C.muted} style={{fontFamily:'Inter',fontSize:14,color:C.ink,backgroundColor:C.paper,borderColor:C.line,borderWidth:1,borderRadius:13,padding:12,minHeight:44,...(multiline?{minHeight:120,textAlignVertical:'top' as const}:{})}}/></View>;}
 export function StatusCheckbox({checked,tone='green',onPress,outline}:{checked:boolean;tone?:Tone;onPress:()=>void;outline?:string}){const C=usePlannerColors();return <Pressable accessibilityRole="checkbox" aria-checked={checked} accessibilityState={{checked}} onPress={onPress} hitSlop={10} style={{width:18,height:18,borderRadius:5,borderWidth:1,borderColor:checked?tones[tone]:outline??C.muted,backgroundColor:checked?tones[tone]:'transparent',alignItems:'center',justifyContent:'center'}}>{checked&&<Icon name="check" size={13} color="#fff"/>}</Pressable>;}
 export function DateLabel({date}:{date?:string}){return date?<T size={11} muted>{new Date(date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}</T>:null;}
-export function CheckableListItem({item,onCheck,onPress,subtitle,right,tone='green'}:{item:RecordObject;onCheck:()=>void;onPress?:()=>void;subtitle?:string;right?:React.ReactNode;tone?:Tone}){const done=item.status==='completed';return <View style={{flexDirection:'row',alignItems:'center',gap:13,minHeight:43,paddingVertical:9,borderBottomWidth:1,borderColor:'#efedeb'}}><StatusCheckbox checked={done||!!item.purchasedAt} tone={tone} onPress={onCheck}/><Pressable onPress={onPress} onLongPress={onPress} style={{flex:1,minWidth:0}}><T size={13} muted={done} style={done?{textDecorationLine:'line-through'}:undefined}>{item.title}</T>{subtitle&&<T size={11} muted color={tone==='red'||tone==='yellow'?tones[tone]:undefined}>{subtitle}</T>}</Pressable>{right??<DateLabel date={item.completedAt}/>}</View>;}
+/** `swipe` (Дом, Родители): in Soft Future swipe right = done, left = edit / archive. Health lists never pass it. */
+export function CheckableListItem(props:{item:RecordObject;onCheck:()=>void;onPress?:()=>void;subtitle?:string;right?:React.ReactNode;tone?:Tone;swipe?:boolean;surface?:string;
+ /** The row stays in the list after being checked (e.g. tab «Все»): slide it back instead of collapsing. */ keepOnComplete?:boolean}){
+ const {patch}=usePlanner();const {item,onCheck,onPress,swipe=false}=props;const done=item.status==='completed';
+ const row=<CheckableRowBody {...props}/>;
+ if(!swipe)return row;
+ return <SwipeableRow testID={'swipe-'+item.id} surface={props.surface??'#faf7f8'} collapseOnComplete={!props.keepOnComplete}
+  complete={done||item.purchasedAt?undefined:{label:'Выполнено',onCommit:()=>onCheck()}}
+  actions={[...(onPress?[{key:'edit',label:'Изменить',icon:'edit' as const,onPress}]:[]),
+   {key:'archive',label:'В архив',icon:'package' as const,tone:'muted' as const,collapse:true,onPress:()=>patch(item.id,{archivedAt:new Date().toISOString()})}]}>{row}</SwipeableRow>;
+}
+function CheckableRowBody({item,onCheck,onPress,subtitle,right,tone='green'}:{item:RecordObject;onCheck:()=>void;onPress?:()=>void;subtitle?:string;right?:React.ReactNode;tone?:Tone}){const swipeRow=useSwipeRow();const done=item.status==='completed';return <View style={{flexDirection:'row',alignItems:'center',gap:13,minHeight:43,paddingVertical:9,borderBottomWidth:1,borderColor:'#efedeb'}}><StatusCheckbox checked={done||!!item.purchasedAt} tone={tone} onPress={onCheck}/><Pressable onPress={onPress} onLongPress={swipeRow.openActions??onPress} style={{flex:1,minWidth:0}}><T size={13} muted={done} style={done?{textDecorationLine:'line-through'}:undefined}>{item.title}</T>{subtitle&&<T size={11} muted color={tone==='red'||tone==='yellow'?tones[tone]:undefined}>{subtitle}</T>}</Pressable>{right??<DateLabel date={item.completedAt}/>}</View>;}
 export function EmptyState({text='Пока ничего нет. Добавьте первый элемент.'}:{text?:string}){return <View style={{padding:28,alignItems:'center'}}><T muted center>{text}</T></View>;}
 export function LoadingState(){const C=usePlannerColors();return <View style={{padding:40}}><ActivityIndicator color={C.purple}/></View>;}
 export function ErrorState(){const C=usePlannerColors();const {error,dismiss}=useApp();return error?<Pressable onPress={dismiss} style={{padding:12,backgroundColor:'#fbe7e8',borderRadius:12}}><T color={C.red}>Не удалось сохранить. Проверьте хранилище и повторите действие. Закрыть</T></Pressable>:null;}
