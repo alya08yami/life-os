@@ -1,12 +1,12 @@
 import React,{useState} from 'react';
-import {Image,Pressable,ScrollView,Share,View} from 'react-native';
+import {Image,Platform,Pressable,ScrollView,Share,TextInput,View} from 'react-native';
 import type {RecordObject} from '@life-os/domain/planner';
 import {comparableOffers} from '@life-os/domain/planner';
 import {Icon} from '../components/Icon';
 import {SoftPressable} from '../design/SoftPressable';
 import {palette,shadows} from '../design/system';
 import {usePlanner} from './context';
-import {T,pictureSource} from './ui';
+import {ConfirmationSheet,T,pictureSource} from './ui';
 
 /**
  * «Покупки и желания» in Soft Future: dense, calm product rows and a product page that reads top-down.
@@ -69,8 +69,10 @@ function ProductRow({item,first,onPress}:{item:RecordObject;first:boolean;onPres
 }
 
 /** Product page. Colour/size selection state belongs to the caller, exactly as before. */
-export function SoftProductDetail({item,color,setColor,size,setSize,link,onSave}:{item:RecordObject;color:number;setColor:(i:number)=>void;size:string;setSize:(s:string)=>void;link:(url:string)=>void;onSave:()=>void}){
+export function SoftProductDetail({item,color,setColor,size,setSize,link}:{item:RecordObject;color:number;setColor:(i:number)=>void;size:string;setSize:(s:string)=>void;link:(url:string)=>void}){
  const {patch,mark}=usePlanner();
+ const [listsOpen,setListsOpen]=useState(false);
+ const listName=typeof item.data.list==='string'?item.data.list.trim():'';
  const [failed,setFailed]=useState(false);
  const d=item.data;
  const {offers,price,currency}=productPrice(item);
@@ -126,11 +128,59 @@ export function SoftProductDetail({item,color,setColor,size,setSize,link,onSave}
    </SoftPressable>
    <View style={{flexDirection:'row',gap:8}}>
     <Secondary icon="check" label={bought?'Куплено ✓':'Куплено'} selected={bought} onPress={()=>bought?patch(item.id,{status:'active',purchasedAt:undefined}).catch(()=>{}):mark(item,'purchase').catch(()=>{})}/>
-    <Secondary icon="bookmark" label="Сохранить" onPress={onSave}/>
+    <Secondary icon="bookmark" label={listName||'В список'} selected={!!listName} onPress={()=>setListsOpen(true)}/>
     <Secondary icon="share" label="Поделиться" onPress={()=>Share.share({message:item.title+(d.sourceUrl?' '+d.sourceUrl:'')}).catch(()=>{})}/>
    </View>
   </View>
+  {listsOpen&&<ListSheet item={item} current={listName} onClose={()=>setListsOpen(false)}/>}
  </View>;
+}
+
+/**
+ * «В список»: the product's existing «Список покупок» field (one list per product, as in the editor).
+ * Choosing a list really writes that field; choosing the current list again takes the product out of it.
+ */
+function ListSheet({item,current,onClose}:{item:RecordObject;current:string;onClose:()=>void}){
+ const {state,patch,update,setToast}=usePlanner();
+ const [name,setName]=useState('');
+ const [error,setError]=useState('');
+ const lists=[...new Set((state?.objects??[]).filter(o=>o.type==='product'&&!o.archivedAt&&typeof o.data.list==='string'&&o.data.list.trim()).map(o=>String(o.data.list).trim()))].sort((a,b)=>a.localeCompare(b,'ru'));
+ const choose=async(list:string)=>{
+  setError('');
+  try{
+   if(list===current){
+    await update(s=>({...s,objects:s.objects.map(o=>{if(o.id!==item.id)return o;const {list:_removed,...data}=o.data;return {...o,data,updatedAt:new Date().toISOString()};})}));
+    setToast({text:'Убрано из списка «'+list+'»'});
+   }else{
+    await patch(item.id,{data:{list}});
+    setToast({text:'Добавлено в список «'+list+'»'});
+   }
+   onClose();
+  }catch{setError('Не удалось сохранить. Попробуйте ещё раз.');}
+ };
+ const create=()=>{const list=name.trim().replace(/\s+/g,' ');if(!list){setError('Введите название списка');return;}if(list.length>60){setError('Название не длиннее 60 символов');return;}choose(list);};
+ return <ConfirmationSheet visible title="В список" onClose={onClose}>
+  <View style={{gap:10}}>
+   {lists.length>0?<View style={{...surface,shadowOpacity:0}}>
+    {lists.map((list,i)=>{const on=list===current;return <Pressable key={list} accessibilityRole="button" accessibilityState={{selected:on}} aria-selected={on}
+     accessibilityHint={on?'Убрать товар из этого списка':undefined} onPress={()=>choose(list)}
+     style={{flexDirection:'row',alignItems:'center',gap:10,minHeight:50,paddingHorizontal:14,borderTopWidth:i?1:0,borderColor:'rgba(41,38,45,0.08)'}}>
+     <Icon name="bookmark" size={17} color={on?palette.graphite:'#a39aa2'} filled={on}/>
+     <T size={14.5} style={{flex:1}} lines={2}>{list}</T>
+     {on?<T size={12.5} color={palette.mauve}>Убрать</T>:null}
+     {on&&<Icon name="check" size={16} color={palette.positive} strokeWidth={2}/>}
+    </Pressable>;})}
+   </View>:<T size={13} color={palette.inkMuted}>Списков пока нет — создайте первый.</T>}
+   <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+    <TextInput value={name} onChangeText={v=>{setName(v);setError('');}} placeholder="Новый список" placeholderTextColor="#8a8189" accessibilityLabel="Название нового списка"
+     onSubmitEditing={create} returnKeyType="done"
+     style={{flex:1,minWidth:0,minHeight:44,borderRadius:12,paddingHorizontal:12,backgroundColor:'rgba(96,87,97,0.07)',fontFamily:'Inter',fontSize:14.5,color:palette.ink,...(Platform.OS==='web'?({outlineStyle:'none'} as object):null)}}/>
+    <Pressable accessibilityRole="button" onPress={create} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:palette.graphite,justifyContent:'center'}}><T size={13.5} bold color="#f4f0f2">Добавить</T></Pressable>
+   </View>
+   {!!error&&<T size={12.5} color={palette.danger}>{error}</T>}
+   <T size={12} color="#8a8189">Товар может быть в одном списке — это то же поле «Список покупок», что в карточке.</T>
+  </View>
+ </ConfirmationSheet>;
 }
 
 function Secondary({icon,label,onPress,selected=false}:{icon:'check'|'bookmark'|'share';label:string;onPress:()=>void;selected?:boolean}){

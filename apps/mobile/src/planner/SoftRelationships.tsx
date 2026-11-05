@@ -24,7 +24,10 @@ const LOOK:Record<Tab,{icon:IconName;color:string;soft:string;done:string;doneVe
 };
 const shortDate=(at?:string)=>at?new Date(at).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'';
 
-export function SoftRelationships({items,adding,closeAdd,open}:{items:RecordObject[];adding:boolean;closeAdd:()=>void;open:(o:RecordObject)=>void}){
+export function SoftRelationships({items,adding,closeAdd,open,searching=false,closeSearch}:{items:RecordObject[];adding:boolean;closeAdd:()=>void;open:(o:RecordObject)=>void;searching?:boolean;closeSearch?:()=>void}){
+ const [query,setQuery]=useState('');
+ // Search looks only inside the current tab (title and note) and lives only on this screen.
+ const q=searching?query.trim().toLocaleLowerCase('ru'):'';
  const {mark,patch,create}=usePlanner();
  const {reduced}=useSoftMotion();
  const [tab,setTab]=useTabState('relationships.tab','Идеи');
@@ -36,7 +39,8 @@ export function SoftRelationships({items,adding,closeAdd,open}:{items:RecordObje
  const [settling,setSettling]=useState<string[]>([]);
  const saving=useRef(false);
  const busy=useRef(new Set<string>());
- const rows=items.filter(item=>item.type==='relationship'&&(item.data.category??'Идеи')===current);
+ const all=items.filter(item=>item.type==='relationship'&&(item.data.category??'Идеи')===current);
+ const rows=q?all.filter(item=>[item.title,item.notes,item.description].join(' ').toLocaleLowerCase('ru').includes(q)):all;
  const active=rows.filter(item=>item.status!=='completed');
  const completed=rows.filter(item=>item.status==='completed');
  const isFight=current==='Ссоры';
@@ -71,13 +75,20 @@ export function SoftRelationships({items,adding,closeAdd,open}:{items:RecordObje
  const surface={backgroundColor:'rgba(251,249,250,0.94)',borderRadius:18,borderWidth:1,borderColor:'rgba(41,38,45,0.06)',overflow:'hidden' as const,...shadows[1]};
  return <>
   <SegmentedTabs values={TABS} value={current} activeColor={look.color} onChange={value=>{setEditing(undefined);setError('');closeAdd();setTab(value);}}/>
+  {searching&&<View style={{flexDirection:'row',alignItems:'center',gap:8,borderRadius:13,backgroundColor:'rgba(251,249,250,0.94)',borderWidth:1,borderColor:'rgba(41,38,45,0.06)',paddingLeft:12}}>
+   <Icon name="search" size={17} color={palette.inkMuted}/>
+   <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={'Поиск: '+current} placeholderTextColor="#8a8189" accessibilityLabel={'Поиск по вкладке '+current}
+    returnKeyType="search" style={{flex:1,minWidth:0,minHeight:44,fontFamily:'Inter',fontSize:14.5,color:palette.ink,...(Platform.OS==='web'?({outlineStyle:'none'} as object):null)}}/>
+   <Action icon="close" label="Закрыть поиск" onPress={()=>{setQuery('');closeSearch?.();}}/>
+  </View>}
+  {!!q&&<T size={12.5} color="#8a8189" style={{paddingHorizontal:4}}>Найдено: {rows.length}</T>}
   {adding&&<View style={{...surface,padding:6}}><Entry key={current} initial="" placeholder={look.placeholder} onSave={v=>save(undefined,v)} onClose={closeAdd}/></View>}
   {!!error&&<T size={12.5} color={palette.danger}>{error}</T>}
   {active.length>0
    ?<View style={surface}>{active.map(row)}</View>
    :!adding&&<View style={{paddingVertical:22,paddingHorizontal:24,alignItems:'center',gap:10}}>
      <Icon name={look.icon} size={26} color={look.soft}/>
-     <T center size={13.5} color={palette.inkMuted} style={{lineHeight:20}}>{rows.length?'Всё '+look.doneVerb+'. Новые записи — через «+» сверху.':look.empty}</T>
+     <T center size={13.5} color={palette.inkMuted} style={{lineHeight:20}}>{q?(rows.length?'Среди активных ничего не найдено — совпадения ниже, в «'+look.done+'».':'Ничего не найдено в «'+current+'».'):rows.length?'Всё '+look.doneVerb+'. Новые записи — через «+» сверху.':look.empty}</T>
     </View>}
   {completed.length>0&&<>
    <Pressable accessibilityRole="button" accessibilityState={{expanded:showDone}} onPress={()=>setShowDone(!showDone)}

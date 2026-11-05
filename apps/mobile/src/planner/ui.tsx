@@ -23,7 +23,33 @@ export function usePlannerColors(){
 export const tones:Record<Tone,string>={neutral:'#92949c',green:C.green,yellow:C.yellow,red:C.red};
 export function T({children,size=14,bold=false,muted=false,color,center=false,style,lines}:{children:React.ReactNode;size?:number;bold?:boolean;muted?:boolean;color?:string;center?:boolean;style?:any;lines?:number}){const C=usePlannerColors();return <Text numberOfLines={lines} style={{fontFamily:'Inter',fontSize:size,lineHeight:size*1.45,color:color??(muted?C.muted:C.ink),fontWeight:bold?'600':'400',textAlign:center?'center':'left',...style}}>{children}</Text>;}
 export function Action({icon,label,onPress,color,filled=false}:{icon:IconName;label:string;onPress:()=>void;color?:string;filled?:boolean}){const C=usePlannerColors();return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{width:36,height:38,alignItems:'center',justifyContent:'center'}}><Icon name={icon} color={color??C.ink} filled={filled} size={21}/></Pressable>;}
-export function AppHeader({title,onBack=goBack,right,centerTitle=false,color}:{title:string;onBack?:()=>void;right?:React.ReactNode;centerTitle?:boolean;color?:string}){return <View style={{minHeight:60,flexDirection:'row',alignItems:'center',gap:6}}><Action icon="back" label="Назад" color={color} onPress={onBack}/><T color={color} lines={2} center={centerTitle||['Работа','Доходы и расходы','Отношения'].includes(title)} size={21} bold style={{flex:1}}>{title}</T>{right}</View>;}
+export function AppHeader(props:{title:string;onBack?:()=>void;right?:React.ReactNode;centerTitle?:boolean;color?:string}){return useSoftMotion().enabled?<SoftAppHeader {...props}/>:<ClassicAppHeader {...props}/>;}
+/**
+ * Soft Future header: one style everywhere — back, title on the left, actions on the right, one line.
+ * A long title first steps down a little (never below 18 px); if it still does not fit (very narrow phones),
+ * it moves to its own full-width line under the buttons instead of wrapping or shrinking further.
+ */
+function SoftAppHeader({title,onBack=goBack,right,color,centerTitle=false}:{title:string;onBack?:()=>void;right?:React.ReactNode;centerTitle?:boolean;color?:string}){
+ const [natural,setNatural]=useState(0);const [room,setRoom]=useState(0);
+ const fit=natural&&room?room/natural:1;
+ const size=fit>=1?21:Math.floor(21*fit*10)/10;
+ const stacked=!!natural&&!!room&&size<18;
+ // An explicit centerTitle (e.g. «Мой календарь») is kept; the old hard-coded centred sections now align like the rest.
+ const label=(sz:number,lines=1)=><T color={color} lines={lines} size={sz} bold center={centerTitle} style={{letterSpacing:-0.2}}>{title}</T>;
+ return <View>
+  {/* invisible measurement of the title's natural one-line width at the full size */}
+  <View pointerEvents="none" style={{position:'absolute',opacity:0,left:0,top:0,flexDirection:'row'}} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+   <Text onLayout={e=>setNatural(e.nativeEvent.layout.width)} style={{fontFamily:'Inter',fontWeight:'600',fontSize:21,letterSpacing:-0.2,...({whiteSpace:'nowrap'} as object)}} numberOfLines={1}>{title}</Text>
+  </View>
+  <View style={{minHeight:60,flexDirection:'row',alignItems:'center',gap:6}}>
+   <Action icon="back" label="Назад" color={color} onPress={onBack}/>
+   <View style={{flex:1,minWidth:0}} onLayout={e=>setRoom(e.nativeEvent.layout.width)}>{!stacked&&label(Math.max(18,size))}</View>
+   {right}
+  </View>
+  {stacked&&<View style={{paddingHorizontal:4,marginTop:-6,marginBottom:6}}>{label(21,2)}</View>}
+ </View>;
+}
+function ClassicAppHeader({title,onBack=goBack,right,centerTitle=false,color}:{title:string;onBack?:()=>void;right?:React.ReactNode;centerTitle?:boolean;color?:string}){return <View style={{minHeight:60,flexDirection:'row',alignItems:'center',gap:6}}><Action icon="back" label="Назад" color={color} onPress={onBack}/><T color={color} lines={2} center={centerTitle||['Работа','Доходы и расходы','Отношения'].includes(title)} size={21} bold style={{flex:1}}>{title}</T>{right}</View>;}
 export function SegmentedTabs(props:{values:string[];value:string;onChange:(s:string)=>void;transparentTrack?:boolean;mistHeader?:boolean;
  /** Soft Future: tab widths follow their labels (keeps mixed short/long labels on one line). */ fit?:boolean;
  /** Soft Future: colour of the active label (e.g. each «Отношения» tab has its own accent). */ activeColor?:string}){const soft=useSoftMotion();return soft.enabled&&!props.mistHeader?<SoftSegmentedTabs {...props} reduced={soft.reduced}/>:<ClassicSegmentedTabs {...props}/>;}
