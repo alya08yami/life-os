@@ -65,7 +65,7 @@ export function NotesGrid({items,open,tab}:Pick<ListProps,'items'|'open'>&{tab:s
      <T muted size={12}>По дате {newest?'↓':'↑'}</T>
     </Pressable>
    </View>
-   {rows.length?grid(rows):<EmptyState text={query?'Заметки не найдены':'Пока нет заметок'}/>}
+   {rows.length?grid(rows):<EmptyState text={query?'Заметки не найдены':'Пока нет заметок. Нажмите «+», чтобы записать первую.'}/>}
   </View>
  </>;
 }
@@ -131,7 +131,7 @@ function SoftNotes({rows,pinned,open,query,setQuery,newest,setNewest}:{rows:Reco
       {item.favorite&&<T size={12} color={palette.mauve}>★</T>}
      </View>
     </SoftPressable>)}
-   </View>:<EmptyState text={query?'Заметки не найдены':pinned.length?'Все заметки закреплены':'Пока нет заметок'}/>}
+   </View>:<EmptyState text={query?'Заметки не найдены':pinned.length?'Все заметки закреплены':'Пока нет заметок. Нажмите «+», чтобы записать первую.'}/>}
   </View>
  </>;
 }

@@ -7,7 +7,7 @@ import {SoftPressable} from '../design/SoftPressable';
 import {palette} from '../design/system';
 import {CatalogError,catalogDetails,catalogErrorText,catalogId,posterUrl,searchCatalog,TMDB_ATTRIBUTION,type CatalogDetails,type CatalogResult} from '../catalog/movies';
 import {usePlanner} from './context';
-import {ConfirmationSheet,T,pictureSource} from './ui';
+import {ConfirmationSheet,T,pictureSource,usePlannerColors} from './ui';
 
 /**
  * Film search (TMDB via the LIFE OS Worker) in a bottom sheet.
@@ -171,8 +171,9 @@ function Poster({uri,source,width,title}:{uri?:string;source?:any;width:number;t
 
 /** TMDB attribution, as its terms require: the logo (less prominent than ours) and the notice. */
 export function Attribution(){
- return <View style={{flexDirection:'row',alignItems:'center',gap:8,paddingTop:2}} accessibilityLabel={'Источник данных: TMDB. '+TMDB_ATTRIBUTION}>
-  <Image source={require('../../assets/attribution/tmdb.png')} resizeMode="contain" style={{width:46,height:14,opacity:0.85}} accessibilityIgnoresInvertColors/>
-  <T size={10.5} color="#8a8189" style={{flex:1,lineHeight:14}}>{TMDB_ATTRIBUTION}</T>
+ const C=usePlannerColors();
+ return <View style={{flexDirection:'row',alignItems:'center',gap:10,paddingTop:4}} accessibilityLabel={'Источник данных: TMDB. '+TMDB_ATTRIBUTION}>
+  <Image source={require('../../assets/attribution/tmdb.png')} resizeMode="contain" style={{width:66,height:19}} accessibilityIgnoresInvertColors/>
+  <T size={11.5} color={C.muted} style={{flex:1,lineHeight:16}}>{TMDB_ATTRIBUTION}</T>
  </View>;
 }

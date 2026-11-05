@@ -114,7 +114,7 @@ export function Conditions({selected,onSelect}:{selected?:string;onSelect:(id:st
    {matching.map(item=><Pressable key={item.id} accessibilityRole="button" onPress={()=>{setTab('Препараты');setError('');onSelect(item.id);}} style={{padding:9,borderRadius:15,backgroundColor:item.id==='condition-head'?'#f5eaf0':C.paper,flexDirection:'row',alignItems:'center',gap:13}}>
     <Badge {...item}/><T size={15} style={{flex:1}}>{records.find(record=>record.id===item.id)?.title??item.title}</T><Icon name="next" size={17} color={C.muted}/>
    </Pressable>)}
-   {!matching.length&&<EmptyState text="Ничего не найдено"/>}
+   {!matching.length&&<EmptyState text="Ничего не найдено. Попробуйте другое слово или часть названия."/>}
    <Primary onPress={()=>start(blank)}>＋ Добавить ситуацию</Primary>
   </>}
   {!draft&&!!error&&<T color={C.red}>{error}</T>}
