@@ -1,0 +1,2 @@
+# Preserve bundled upstream license text; its original trailing spaces are intentional.
+apps/mobile/assets/fonts/*-OFL.txt -whitespace

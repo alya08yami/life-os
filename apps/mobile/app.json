@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "LIFE OS",
+    "slug": "life-os",
+    "scheme": "lifeos",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "app.lifeos.organizer",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.lifeos.organizer"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "LIFE OS"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Разрешите LIFE OS выбрать изображение для сохранения в Inbox.",
+          "cameraPermission": "Разрешите LIFE OS сделать фотографию для сохранения карточки.",
+          "microphonePermission": false
+        }
+      ],
+      ["expo-notifications", {"sounds": ["./assets/sounds/shift-soft.wav", "./assets/sounds/shift-short.wav", "./assets/sounds/shift-bright.wav"]}],
+      "expo-dev-client",
+      [
+        "expo-sharing",
+        {
+          "ios": {
+            "enabled": true,
+            "activationRule": {
+              "supportsText": true,
+              "supportsWebURLWithMaxCount": 1,
+              "supportsImageWithMaxCount": 10
+            }
+          },
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": [
+              "text/plain",
+              "image/*"
+            ],
+            "multipleShareMimeTypes": [
+              "image/*"
+            ]
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Разрешите LIFE OS показать расстояние до сохранённых мест. Позиция используется только на устройстве.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
+    ]
+  }
+}

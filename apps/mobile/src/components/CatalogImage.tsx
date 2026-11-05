@@ -1,0 +1,4 @@
+import React from 'react';import {View} from 'react-native';import {Image} from 'expo-image';
+import {useColors} from '../design/primitives';import {Icon} from './Icon';
+export type CatalogSource=number|{uri:string};
+export function CatalogImage({source,label,ratio=1,square=false,volatile=false}:{source?:CatalogSource;label:string;ratio?:number;square?:boolean;volatile?:boolean}){const c=useColors();return <View style={{width:'100%',aspectRatio:ratio,backgroundColor:c.card,overflow:'hidden',borderRadius:square?16:20}}>{source?<Image source={source} accessibilityLabel={label} contentFit="cover" cachePolicy={volatile?'none':'memory-disk'} transition={120} style={{width:'100%',height:'100%'}}/>:<View style={{flex:1,alignItems:'center',justifyContent:'center'}}><Icon name="image" size={30} color={c.muted}/></View>}</View>;}

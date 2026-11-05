@@ -1,0 +1,7 @@
+import React,{createContext,useContext,useState,useEffect} from 'react';
+import {useApp} from '../context';
+export type CatalogMode='demo'|'personal';
+type CatalogSession={comparison:string[];setComparison:(ids:string[])=>void;toggleComparison:(id:string)=>void;mode:CatalogMode;setMode:(mode:CatalogMode)=>void;demoFavorites:Set<string>;favoriteDemo:(id:string)=>void};
+const Context=createContext<CatalogSession|null>(null);
+export function CatalogProvider({children}:{children:React.ReactNode}){const {state,repo,run,ready}=useApp();const [mode,setCurrent]=useState<CatalogMode>('personal');const [comparison,setComparison]=useState<string[]>([]);const [demoFavorites,setFavorites]=useState(new Set<string>());useEffect(()=>{const saved=state.uiPreferences?.['catalog.mode'];if(ready&&(saved==='demo'||saved==='personal'))setCurrent(saved);},[state.uiPreferences?.['catalog.mode'],ready]);return <Context.Provider value={{comparison,setComparison,toggleComparison:id=>setComparison(old=>old.includes(id)?old.filter(x=>x!==id):old.length<3?[...old,id]:old),mode,setMode:next=>{setCurrent(next);setComparison([]);run(()=>repo.preference('catalog.mode',next)).catch(()=>{});},demoFavorites,favoriteDemo:id=>setFavorites(old=>{const next=new Set(old);next.has(id)?next.delete(id):next.add(id);return next;})}}>{children}</Context.Provider>;}
+export function useCatalog(){const value=useContext(Context);if(!value)throw new Error('CatalogProvider missing');return value;}

@@ -1,0 +1,3 @@
+// In-memory API for automated tests only. No provider is configured; AI must fail honestly.
+if(!process.argv.includes('--fixtures'))throw new Error('Test fixtures require --fixtures');
+(async()=>{const {LifeServer}=await import('../apps/server/src/service.ts');const {apiServer}=await import('../apps/server/src/http.ts');const service=new LifeServer(':memory:',{setupCode:'synthetic-test-registration-only'});const server=apiServer(service);server.listen(8787,'127.0.0.1',()=>console.log('Test-only in-memory API on 8787; no AI provider'));const close=()=>server.close(()=>{service.close();process.exit(0);});process.on('SIGTERM',close);process.on('SIGINT',close);})();
