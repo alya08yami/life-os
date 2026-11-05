@@ -186,9 +186,10 @@ const json = (body, status, cors) => new Response(JSON.stringify(body), { status
 **Секретов в коде нет.** Перед публикацией Pages я запускаю и показываю вам результат:
 ```sh
 pnpm build:pages
-grep -rlE "eyJ[A-Za-z0-9_-]{20,}" apps/mobile/dist-pages || echo "токенов нет"
+# Токен TMDB — это JWT, он всегда начинается с eyJhbGciOi. Широкий шаблон eyJ… ложно срабатывает на встроенных картинках base64.
+grep -rl "eyJhbGciOi" apps/mobile/dist-pages || echo "токенов нет"
 grep -rlE "[0-9a-f]{32}" apps/mobile/dist-pages | xargs -r grep -l "api_key" || echo "api_key нет"
-git grep -nE "eyJ[A-Za-z0-9_-]{20,}|TMDB_TOKEN=" || echo "в репозитории секретов нет"
+git grep -nE "eyJhbGciOi|TMDB_TOKEN=" || echo "в репозитории секретов нет"
 ```
 В браузере (DevTools → Network) запросы идут на адрес Worker без заголовка `Authorization`.
 
