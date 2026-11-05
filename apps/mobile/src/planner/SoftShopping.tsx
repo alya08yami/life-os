@@ -6,7 +6,8 @@ import {Icon} from '../components/Icon';
 import {SoftPressable} from '../design/SoftPressable';
 import {palette,shadows} from '../design/system';
 import {usePlanner} from './context';
-import {ConfirmationSheet,T,pictureSource} from './ui';
+import {ConfirmationSheet,T,pictureSource,usePlannerColors} from './ui';
+import {useSoftMotion} from '../design/motion';
 
 /**
  * «Покупки и желания» in Soft Future: dense, calm product rows and a product page that reads top-down.
@@ -140,8 +141,12 @@ export function SoftProductDetail({item,color,setColor,size,setSize,link}:{item:
  * «В список»: the product's existing «Список покупок» field (one list per product, as in the editor).
  * Choosing a list really writes that field; choosing the current list again takes the product out of it.
  */
-function ListSheet({item,current,onClose}:{item:RecordObject;current:string;onClose:()=>void}){
+export function ListSheet({item,current,onClose}:{item:RecordObject;current:string;onClose:()=>void}){
  const {state,patch,update,setToast}=usePlanner();
+ const soft=useSoftMotion().enabled;const C=usePlannerColors();
+ // Same behaviour in every theme; colours follow the theme (Soft Future keeps its own look).
+ const k=soft?{list:{...surface,shadowOpacity:0},ink:palette.ink,muted:palette.inkMuted,accent:palette.mauve,icon:palette.graphite,iconOff:'#a39aa2',btn:palette.graphite,btnInk:'#f4f0f2',line:'rgba(41,38,45,0.08)',field:{backgroundColor:'rgba(96,87,97,0.07)'},danger:palette.danger,ok:palette.positive,hint:'#8a8189'}
+  :{list:{backgroundColor:C.paper,borderRadius:14,borderWidth:1,borderColor:C.line,overflow:'hidden' as const},ink:C.ink,muted:C.muted,accent:C.purple,icon:C.purple,iconOff:C.muted,btn:C.lavender,btnInk:C.purple,line:C.line,field:{backgroundColor:C.paper,borderWidth:1,borderColor:C.line},danger:C.red,ok:C.green,hint:C.muted};
  const [name,setName]=useState('');
  const [error,setError]=useState('');
  const lists=[...new Set((state?.objects??[]).filter(o=>o.type==='product'&&!o.archivedAt&&typeof o.data.list==='string'&&o.data.list.trim()).map(o=>String(o.data.list).trim()))].sort((a,b)=>a.localeCompare(b,'ru'));
@@ -161,24 +166,24 @@ function ListSheet({item,current,onClose}:{item:RecordObject;current:string;onCl
  const create=()=>{const list=name.trim().replace(/\s+/g,' ');if(!list){setError('Введите название списка');return;}if(list.length>60){setError('Название не длиннее 60 символов');return;}choose(list);};
  return <ConfirmationSheet visible title="В список" onClose={onClose}>
   <View style={{gap:10}}>
-   {lists.length>0?<View style={{...surface,shadowOpacity:0}}>
+   {lists.length>0?<View style={k.list}>
     {lists.map((list,i)=>{const on=list===current;return <Pressable key={list} accessibilityRole="button" accessibilityState={{selected:on}} aria-selected={on}
      accessibilityHint={on?'Убрать товар из этого списка':undefined} onPress={()=>choose(list)}
-     style={{flexDirection:'row',alignItems:'center',gap:10,minHeight:50,paddingHorizontal:14,borderTopWidth:i?1:0,borderColor:'rgba(41,38,45,0.08)'}}>
-     <Icon name="bookmark" size={17} color={on?palette.graphite:'#a39aa2'} filled={on}/>
-     <T size={14.5} style={{flex:1}} lines={2}>{list}</T>
-     {on?<T size={12.5} color={palette.mauve}>Убрать</T>:null}
-     {on&&<Icon name="check" size={16} color={palette.positive} strokeWidth={2}/>}
+     style={{flexDirection:'row',alignItems:'center',gap:10,minHeight:50,paddingHorizontal:14,borderTopWidth:i?1:0,borderColor:k.line}}>
+     <Icon name="bookmark" size={17} color={on?k.icon:k.iconOff} filled={on}/>
+     <T size={14.5} color={k.ink} style={{flex:1}} lines={2}>{list}</T>
+     {on?<T size={12.5} color={k.accent}>Убрать</T>:null}
+     {on&&<Icon name="check" size={16} color={k.ok} strokeWidth={2}/>}
     </Pressable>;})}
-   </View>:<T size={13} color={palette.inkMuted}>Списков пока нет — создайте первый.</T>}
+   </View>:<T size={13} color={k.muted}>Списков пока нет — создайте первый.</T>}
    <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
-    <TextInput value={name} onChangeText={v=>{setName(v);setError('');}} placeholder="Новый список" placeholderTextColor="#8a8189" accessibilityLabel="Название нового списка"
+    <TextInput value={name} onChangeText={v=>{setName(v);setError('');}} placeholder="Новый список" placeholderTextColor={k.hint} accessibilityLabel="Название нового списка"
      onSubmitEditing={create} returnKeyType="done"
-     style={{flex:1,minWidth:0,minHeight:44,borderRadius:12,paddingHorizontal:12,backgroundColor:'rgba(96,87,97,0.07)',fontFamily:'Inter',fontSize:14.5,color:palette.ink,...(Platform.OS==='web'?({outlineStyle:'none'} as object):null)}}/>
-    <Pressable accessibilityRole="button" onPress={create} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:palette.graphite,justifyContent:'center'}}><T size={13.5} bold color="#f4f0f2">Добавить</T></Pressable>
+     style={{flex:1,minWidth:0,minHeight:44,borderRadius:12,paddingHorizontal:12,...k.field,fontFamily:'Inter',fontSize:14.5,color:k.ink,...(Platform.OS==='web'?({outlineStyle:'none'} as object):null)}}/>
+    <Pressable accessibilityRole="button" onPress={create} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:k.btn,justifyContent:'center'}}><T size={13.5} bold color={k.btnInk}>Добавить</T></Pressable>
    </View>
-   {!!error&&<T size={12.5} color={palette.danger}>{error}</T>}
-   <T size={12} color="#8a8189">Товар может быть в одном списке — это то же поле «Список покупок», что в карточке.</T>
+   {!!error&&<T size={12.5} color={k.danger}>{error}</T>}
+   <T size={12} color={k.hint}>Товар может быть в одном списке — это то же поле «Список покупок», что в карточке.</T>
   </View>
  </ConfirmationSheet>;
 }
