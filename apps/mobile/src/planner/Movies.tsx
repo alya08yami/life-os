@@ -7,6 +7,7 @@ import {palette,shadows} from '../design/system';
 import {usePlanner} from './context';
 import {openFile} from './files';
 import {DateLabel,SegmentedTabs,T,pictureSource,usePlannerColors} from './ui';
+import {Attribution,MovieSearchSheet} from './MovieSearch';
 
 /**
  * «Фильмы» in Soft Future: a vertical poster collection and a calm film page.
@@ -69,6 +70,7 @@ export function MovieDetail({item,onEdit}:{item:RecordObject;onEdit:()=>void}){
  const [error,setError]=useState('');
  const [failed,setFailed]=useState(false);
  const [contentWidth,setContentWidth]=useState(0);
+ const [posterSearch,setPosterSearch]=useState(false);
  const d=item.data;
  // Side by side only when the content column itself is wide enough (tablets); on phones the poster sits on top.
  const wide=contentWidth>=440;
@@ -153,6 +155,13 @@ export function MovieDetail({item,onEdit}:{item:RecordObject;onEdit:()=>void}){
   </View>
   {otherFiles.map(f=><Pressable key={f.id} accessibilityRole="link" onPress={()=>openFile(f)} style={{minHeight:36,justifyContent:'center'}}><T size={13} color={palette.mauve}>{f.name} ↗</T></Pressable>)}
   {!!error&&<T size={12.5} color={C.red}>{error}</T>}
+  {/* Poster from the catalog: only for a film without any cover; nothing else of the film is changed. */}
+  {!source&&<SoftPressable accessibilityRole="button" onPress={()=>setPosterSearch(true)}
+   style={{minHeight:46,borderRadius:13,borderWidth:1,borderColor:'rgba(41,38,45,0.12)',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7}}>
+   <Icon name="image" size={16} color={palette.ink}/><T size={13.5}>Найти постер</T>
+  </SoftPressable>}
+  {(d.catalogSource==='TMDB'||/^https:\/\/image\.tmdb\.org\//.test(String(d.posterUrl??'')))&&<Attribution/>}
+  {posterSearch&&<MovieSearchSheet mode={{kind:'poster',item}} onClose={()=>setPosterSearch(false)}/>}
  </View>;
 }
 
