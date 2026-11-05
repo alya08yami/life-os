@@ -4,6 +4,7 @@ import {useApp} from '../context';
 import {calendarPeriodFill,mistCalendar} from '../design/themes';
 import {usePlannerColors} from './ui';
 import {useSoftMotion} from '../design/motion';
+import {router} from 'expo-router';
 import {SoftPressable} from '../design/SoftPressable';
 import {palette} from '../design/system';
 import {MealPlan} from './MealPlan';
@@ -84,10 +85,17 @@ function SoftNotes({rows,pinned,open,query,setQuery,newest,setNewest}:{rows:Reco
   <Icon name="bookmark" size={15} color={item.pinned?palette.mauve:'#a39aa2'} filled={!!item.pinned}/>
  </Pressable>;
  return <>
-  <View style={{flexDirection:'row',alignItems:'center',gap:9,borderRadius:13,backgroundColor:'rgba(251,249,250,0.94)',paddingHorizontal:12}}>
-   <Icon name="search" size={18} color={palette.inkMuted}/>
-   <TextInput value={query} onChangeText={setQuery} accessibilityLabel="Поиск по заметкам" placeholder="Поиск по заметкам"
-    placeholderTextColor={C.muted} style={{flex:1,minHeight:44,fontFamily:'Inter',fontSize:14,color:C.ink}}/>
+  <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+   <View style={{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:9,borderRadius:13,backgroundColor:'rgba(251,249,250,0.94)',paddingHorizontal:12}}>
+    <Icon name="search" size={18} color={palette.inkMuted}/>
+    <TextInput value={query} onChangeText={setQuery} accessibilityLabel="Поиск по заметкам" placeholder="Поиск по заметкам"
+     placeholderTextColor={C.muted} style={{flex:1,minWidth:0,minHeight:44,fontFamily:'Inter',fontSize:14,color:C.ink}}/>
+   </View>
+   {/* Quick way to «Мои дела» (it used to live in this screen's own bottom bar). */}
+   <SoftPressable accessibilityRole="button" accessibilityLabel="Мои дела" onPress={()=>router.push('/tasks')}
+    style={{minHeight:44,borderRadius:13,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'rgba(251,249,250,0.94)',borderWidth:1,borderColor:'rgba(41,38,45,0.07)'}}>
+    <Icon name="tasks" size={17} color={palette.ink}/><T size={13.5}>Дела</T>
+   </SoftPressable>
   </View>
   {pinned.length>0&&<View style={{gap:8,marginTop:6}}>
    <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between'}}>

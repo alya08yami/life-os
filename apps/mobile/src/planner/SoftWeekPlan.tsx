@@ -37,7 +37,7 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
  // On opening and on a new week, the chosen day is shown at once, with the previous day next to it.
  useEffect(()=>{if(!column)return;const x=Math.max(0,(selected-1)*(column+GAP));scroll.current?.scrollTo({x,animated:false});setOffset(x);},[column,monday]);
  const today=new Date();const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
- return <View style={{gap:10}} accessibilityLabel="План питания">
+ return <View style={{gap:8}} accessibilityLabel="План питания">
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
    <Action icon="back" label="Предыдущая неделя · План питания" onPress={()=>setDate(shiftDay(date,-7))}/>
    <T size={13.5} color={palette.inkMuted}>{range(monday)}</T>
@@ -55,11 +55,12 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
      style={{...(Platform.OS==='web'?({scrollSnapAlign:'start'} as object):null),width:column,borderRadius:16,padding:7,paddingBottom:9,backgroundColor:on?'rgba(251,249,250,0.98)':'rgba(251,249,250,0.74)',
       borderWidth:on?1.5:1,borderColor:on?palette.graphite:'rgba(41,38,45,0.06)',...(on?shadows[1]:null)}}>
      <Pressable accessibilityRole="button" accessibilityState={{selected:on}} accessibilityLabel={'День плана '+key} onPress={()=>setDate(key)}
-      style={{flexDirection:'row',alignItems:'baseline',gap:5,paddingHorizontal:2,minHeight:30,paddingTop:2}}>
-      <T size={15.5} bold>{new Date(key+'T12:00:00').getDate()}</T><T size={12} color={key===todayKey?palette.dustyRose:palette.inkMuted} bold={key===todayKey}>{label}</T>
+      style={{flexDirection:'row',alignItems:'baseline',gap:5,paddingHorizontal:7,minHeight:30,paddingTop:4,borderRadius:10,backgroundColor:on?palette.graphite:'transparent'}}>
+      <T size={15.5} bold color={on?'#f4f0f2':palette.ink}>{new Date(key+'T12:00:00').getDate()}</T>
+      <T size={12} color={on?'rgba(244,240,242,0.78)':key===todayKey?palette.dustyRose:palette.inkMuted} bold={key===todayKey}>{label}</T>
      </Pressable>
-     {MEALS.map(meal=>{const o=dish(key,meal);return <View key={meal} style={{marginTop:6}}>
-      <T size={9.5} color="#8a8189" bold style={{letterSpacing:0.5,textTransform:'uppercase',marginHorizontal:2,marginBottom:3,lineHeight:12}}>{meal}</T>
+     {MEALS.map(meal=>{const o=dish(key,meal);return <View key={meal} style={{marginTop:5}}>
+      <T size={9.5} color="#8a8189" bold style={{letterSpacing:0.5,textTransform:'uppercase',marginHorizontal:2,marginBottom:2,lineHeight:12}}>{meal}</T>
       <MealCell o={o} width={column-14} meal={meal} day={key} onPress={()=>o?open(o):assign({date:key,meal})} onLongPress={()=>assign({date:key,meal})}/>
      </View>;})}
     </View>;})}
@@ -69,7 +70,7 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
    {days.map((d,i)=>{const first=column?Math.round(offset/(column+GAP)):0;const visible=i>=first&&i<first+3;return <View key={d.key}
     style={{width:i===selected?14:5,height:5,borderRadius:3,backgroundColor:i===selected?palette.graphite:visible?'rgba(41,38,45,0.34)':'rgba(41,38,45,0.14)'}}/>;})}
   </View>
-  <FadeRise key={date} style={{gap:8,marginTop:6}}>
+  <FadeRise key={date} style={{gap:8,marginTop:2}}>
    <T size={15} bold>{new Date(date+'T12:00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase())}</T>
    <View style={{backgroundColor:'rgba(251,249,250,0.94)',borderRadius:18,borderWidth:1,borderColor:'rgba(41,38,45,0.06)',overflow:'hidden',...shadows[1]}}>
     {MEALS.map((meal,i)=>{const o=dish(date,meal);const source=o&&pictureSource(o);return <SoftPressable key={meal} accessibilityRole="button"
@@ -92,15 +93,15 @@ function MealCell({o,width,meal,day,onPress,onLongPress}:{o?:RecordObject;width:
  const source=o?pictureSource(o):undefined;
  const [failed,setFailed]=useState(false);
  if(!o)return <Pressable accessibilityRole="button" accessibilityLabel={meal+' · '+day+' · Добавить'} onPress={onPress} onLongPress={onLongPress}
-  style={{width,height:Math.round(width*0.75),borderRadius:9,borderWidth:1,borderStyle:'dashed',borderColor:'rgba(41,38,45,0.16)',alignItems:'center',justifyContent:'center',marginBottom:52}}>
+  style={{width,height:Math.round(width*0.6),borderRadius:9,borderWidth:1,borderStyle:'dashed',borderColor:'rgba(41,38,45,0.16)',alignItems:'center',justifyContent:'center',marginBottom:49.5}}>
   <Icon name="plus" size={14} color="#bdb3bb"/>
  </Pressable>;
  // Long single words get a slightly smaller size instead of being broken in the middle.
  const long=o.title.split(/\s+/).some(w=>w.length>11);
  return <SoftPressable accessibilityRole="button" accessibilityLabel={meal+' · '+day+' · '+o.title} onPress={onPress} onLongPress={onLongPress} style={{width}}>
   {source&&!failed
-   ?<Image source={source} resizeMode="cover" onError={()=>setFailed(true)} style={{width,height:Math.round(width*0.75),borderRadius:9,backgroundColor:'#eee8eb'}}/>
-   :<View style={{width,height:Math.round(width*0.75),borderRadius:9,backgroundColor:'#ede5ea',alignItems:'center',justifyContent:'center'}}><Icon name="soup" size={18} color="#a99ea6"/></View>}
-  <T size={long?11.5:12.5} lines={3} color={palette.ink} style={{lineHeight:16,marginTop:4,marginHorizontal:1,minHeight:48}}>{o.title}</T>
+   ?<Image source={source} resizeMode="cover" onError={()=>setFailed(true)} style={{width,height:Math.round(width*0.6),borderRadius:9,backgroundColor:'#eee8eb'}}/>
+   :<View style={{width,height:Math.round(width*0.6),borderRadius:9,backgroundColor:'#ede5ea',alignItems:'center',justifyContent:'center'}}><Icon name="soup" size={18} color="#a99ea6"/></View>}
+  <T size={long?11.5:12.5} lines={3} color={palette.ink} style={{lineHeight:15.5,marginTop:3,marginHorizontal:1,minHeight:46.5}}>{o.title}</T>
  </SoftPressable>;
 }
