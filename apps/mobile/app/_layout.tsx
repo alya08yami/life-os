@@ -19,9 +19,12 @@ import {SoftTransitionProvider} from '../src/design/transition';
 function Routes(){const {state,ready}=useApp();const path=usePathname();
  // Soft Future: the home screen starts on graphite, so the status-bar area and icons follow it.
  const softHome=state.settings.theme==='soft'&&path==='/';
- // Installed web app: the status-bar colour follows the current screen (iOS / Android read <meta name="theme-color">).
- const bar=softHome?gradients.background[0]:colors[state.settings.theme].bg;
- useEffect(()=>{if(Platform.OS!=='web'||typeof document==='undefined')return;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',bar);},[bar]);
- return <SafeAreaView style={{flex:1,backgroundColor:softHome?gradients.background[0]:colors[state.settings.theme].bg}} edges={['top','left','right']}><WebInteractionStyles/><StatusBar style={state.settings.theme==='dark'||softHome?'light':'dark'}/><SoftTransitionProvider><SwipeBack><Stack screenOptions={{headerShown:false,animation:'slide_from_right'}}/></SwipeBack></SoftTransitionProvider>{ready&&<ShiftNotificationSync data={state.planner?.shiftCalendar}/>}</SafeAreaView>;}
+ // Colour under the status bar: graphite on the Soft Future home screen, the light milk-rose top of the inner-screen wash
+ // in Soft Future, each theme's own background elsewhere. The installed web app on iOS 26 tints the status-bar area with the
+ // page's body background (theme-color is no longer reliable there), so body, <meta name="theme-color"> and the safe area
+ // all get the same colour — no dark haze over light screens.
+ const bar=softHome?gradients.background[0]:state.settings.theme==='soft'?'#f4f0f2':colors[state.settings.theme].bg;
+ useEffect(()=>{if(Platform.OS!=='web'||typeof document==='undefined')return;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',bar);document.documentElement.style.backgroundColor=bar;document.body.style.backgroundColor=bar;},[bar]);
+ return <SafeAreaView style={{flex:1,backgroundColor:bar}} edges={['top','left','right']}><WebInteractionStyles/><StatusBar style={state.settings.theme==='dark'||softHome?'light':'dark'}/><SoftTransitionProvider><SwipeBack><Stack screenOptions={{headerShown:false,animation:'slide_from_right'}}/></SwipeBack></SoftTransitionProvider>{ready&&<ShiftNotificationSync data={state.planner?.shiftCalendar}/>}</SafeAreaView>;}
 function LocalProfile(){const {session}=useApi();const path=usePathname();const profileId=session?'life-os-user-'+session.user.id:'life-os-v1';const previous=useRef(profileId);useEffect(()=>{if(previous.current!==profileId){previous.current=profileId;router.replace(path as '/');}},[profileId]);return <AppProvider key={profileId} profileId={profileId}><PlannerProvider><NotificationSync/><CatalogProvider><Routes/></CatalogProvider></PlannerProvider></AppProvider>;}
 export default function Root(){const [loaded,error]=useFonts({Inter:require('../assets/fonts/Inter.ttf')});if(!loaded&&!error)return <View style={{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:'#F8F7F5'}}><Text>LIFE OS</Text></View>;return <SafeAreaProvider><ApiProvider><LocalProfile/></ApiProvider></SafeAreaProvider>;}

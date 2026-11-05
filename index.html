@@ -12,7 +12,7 @@
     <link rel="manifest" href="/life-os/manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="48x48" href="/life-os/icons/favicon-48.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/life-os/icons/apple-touch-icon.png" />
-    <meta name="theme-color" content="#35343D" />
+    <meta name="theme-color" content="#f4f0f2" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="LIFE OS" />
@@ -37,8 +37,10 @@
       }
     </style>
     <style>
-      /* Graphite while the app starts, matching the Soft Future home screen; each screen paints its own background. */
-      html, body { background: #35343D; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+      /* iOS 26 tints the status-bar area (and the bottom edge) with the page's body background, not with theme-color.
+         So the body must match the colour each screen shows at the top: the app updates it per screen
+         (graphite only on the Soft Future home screen). Start light so no dark haze appears before the app paints. */
+      html, body { background: #f4f0f2; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
     </style>
   </head>
 
@@ -55,6 +57,6 @@
         });
       })();
     </script>
-  <script src="/life-os/_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js" defer></script><script src="/life-os/_expo/static/js/web/__common-5f2cd4303661bb27b3d0c5d4b6428581.js" defer></script><script src="/life-os/_expo/static/js/web/entry-00dbe59a113fb80fc23367e77a5302a4.js" defer></script>
+  <script src="/life-os/_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js" defer></script><script src="/life-os/_expo/static/js/web/__common-5f2cd4303661bb27b3d0c5d4b6428581.js" defer></script><script src="/life-os/_expo/static/js/web/entry-c5343a5b71f7a31931a21576aaa296cb.js" defer></script>
 </body>
 </html>
