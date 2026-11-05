@@ -135,7 +135,7 @@ export function MovieDetail({item,onEdit}:{item:RecordObject;onEdit:()=>void}){
     {rating!==undefined&&<Pressable accessibilityRole="button" onPress={()=>rate(rating)} style={{minHeight:32,justifyContent:'center',paddingHorizontal:4}}><T size={12.5} color={palette.mauve}>Убрать</T></Pressable>}
    </View>
    <View style={{flexDirection:'row',flexWrap:'wrap',gap:4}}>
-    {RATINGS.map(value=>{const on=rating===value;return <Pressable key={value} accessibilityRole="button" accessibilityLabel={'Оценка '+value} accessibilityState={{selected:on}}
+    {RATINGS.map(value=>{const on=rating===value;return <Pressable key={value} accessibilityRole="button" accessibilityLabel={'Оценка '+value} accessibilityState={{selected:on}} aria-selected={on}
      onPress={()=>rate(value)}
      style={{height:40,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:on?palette.graphite:'rgba(41,38,45,0.06)',
       width:contentWidth?(one?(contentWidth-4*(RATINGS.length-1))/RATINGS.length:(contentWidth-4*5)/6):36}}>
@@ -157,7 +157,7 @@ export function MovieDetail({item,onEdit}:{item:RecordObject;onEdit:()=>void}){
 }
 
 function Secondary({icon,label,onPress,filled=false}:{icon:'heart'|'share';label:string;onPress:()=>void;filled?:boolean}){
- return <SoftPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={icon==='heart'?{selected:filled}:undefined} onPress={onPress}
+ return <SoftPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={icon==='heart'?{selected:filled}:undefined} aria-selected={icon==='heart'?filled:undefined} onPress={onPress}
   style={{flex:1,minHeight:44,borderRadius:13,backgroundColor:'rgba(251,249,250,0.94)',borderWidth:1,borderColor:'rgba(41,38,45,0.08)',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingHorizontal:8}}>
   <Icon name={icon} size={16} color={filled?palette.danger:palette.ink} filled={filled}/><T size={13} lines={1}>{label}</T>
  </SoftPressable>;

@@ -12,7 +12,11 @@ import {T,pictureSource} from './ui';
  */
 export function SoftPlaceRow({item,section,onPress}:{item:RecordObject;section:'travel'|'wardrobe';onPress:()=>void}){
  const [failed,setFailed]=useState(false);
- const source=pictureSource(item);
+ // A real photo from the data: the user's own image first, then a place photo saved with the record (https only).
+ const placePhoto=typeof item.data.photoUrl==='string'&&/^https:\/\//.test(item.data.photoUrl)?{uri:item.data.photoUrl}:undefined;
+ const source=pictureSource(item)??(section==='travel'?placePhoto:undefined);
+ const fromPlaces=!pictureSource(item)&&!!placePhoto;
+ const author=fromPlaces&&Array.isArray(item.data.authors)?item.data.authors.map((a:any)=>a?.name).filter(Boolean).join(', '):'';
  const photo=!!source&&!failed;
  const d=item.data;
  const visited=section==='travel'&&item.status==='completed';
@@ -30,6 +34,7 @@ export function SoftPlaceRow({item,section,onPress}:{item:RecordObject;section:'
   <View style={{flex:1,minWidth:0,gap:2}}>
    <T size={15} bold lines={2} style={{lineHeight:20}}>{item.title}</T>
    {!!subtitle&&<T size={13} lines={2} color="#5f5862">{subtitle}</T>}
+   {photo&&!!author&&<T size={11} lines={1} color="#8a8189">Фото: {author}</T>}
    {(visited||section==='travel'&&d.sourceUrl)&&<View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',columnGap:12,rowGap:2,marginTop:3}}>
     {visited&&<View style={{flexDirection:'row',alignItems:'center',gap:4}}>
      <Icon name="check" size={13} color={palette.positive} strokeWidth={2}/><T size={12.5} color="#2F6B5A">Посещено{date?' · '+date:''}</T>

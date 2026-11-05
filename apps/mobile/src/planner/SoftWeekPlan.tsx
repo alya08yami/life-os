@@ -54,7 +54,7 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
     {days.map(({label,key},i)=>{const on=i===selected;return <View key={key} testID={'meal-day-'+key}
      style={{...(Platform.OS==='web'?({scrollSnapAlign:'start'} as object):null),width:column,borderRadius:16,padding:7,paddingBottom:9,backgroundColor:on?'rgba(251,249,250,0.98)':'rgba(251,249,250,0.74)',
       borderWidth:on?1.5:1,borderColor:on?palette.graphite:'rgba(41,38,45,0.06)',...(on?shadows[1]:null)}}>
-     <Pressable accessibilityRole="button" accessibilityState={{selected:on}} accessibilityLabel={'День плана '+key} onPress={()=>setDate(key)}
+     <Pressable accessibilityRole="button" accessibilityState={{selected:on}} aria-selected={on} accessibilityLabel={'День плана '+key} onPress={()=>setDate(key)}
       style={{flexDirection:'row',alignItems:'baseline',gap:5,paddingHorizontal:7,minHeight:30,paddingTop:4,borderRadius:10,backgroundColor:on?palette.graphite:'transparent'}}>
       <T size={15.5} bold color={on?'#f4f0f2':palette.ink}>{new Date(key+'T12:00:00').getDate()}</T>
       <T size={12} color={on?'rgba(244,240,242,0.78)':key===todayKey?palette.dustyRose:palette.inkMuted} bold={key===todayKey}>{label}</T>
