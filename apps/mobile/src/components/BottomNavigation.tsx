@@ -1,9 +1,16 @@
-import {minimalSurfaces} from '../design/themes';
+import {minimalSurfaces,warmSurfaces,softHome} from '../design/themes';
+import {useEffectiveTheme,useReducedMotion} from '../design/scope';
+import {SoftPressable} from '../design/SoftPressable';
+import {useSoftNavigation} from '../design/transition';
+import {StaggerIn,ease} from '../design/motion';
+import {blur,gradients,motion,shadows,spring} from '../design/system';
+import {Animated} from 'react-native';
 import {useApp} from '../context';
 import {usePlannerColors} from '../planner/ui';
 import {stageVoiceDraft} from '../planner/voiceDraft';
 import React,{useEffect,useRef,useState} from 'react';
 import {View,Pressable,Platform,TextInput} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {router,usePathname,useLocalSearchParams} from 'expo-router';
 import {Icon} from './Icon';
 import {C,T,ConfirmationSheet,Primary,Action} from '../planner/ui';
@@ -20,7 +27,8 @@ type Recognition = {
 };
 
 export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=usePlannerColors();
- const {theme}=useApp().state.settings;
+ const theme=useEffectiveTheme();
+ const {navigate:softNavigate}=useSoftNavigation();
  const path=usePathname();const params=useLocalSearchParams<{section:string}>();const [add,setAdd]=useState(false);
  const [spoken,setSpoken]=useState('');
  const [listening,setListening]=useState(false);
@@ -59,12 +67,17 @@ export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=useP
  };
  const section=params.section??(path.includes('wishlist')?'shopping':path.startsWith('/section/')?path.split('/')[2]:path.includes('health')?'health':undefined);
  const choices:{title:string;type:string;category?:string}[]|null=section==='health'?[{title:'Добавить обследование',type:'checkup'},{title:'Добавить препарат',type:'medication'},{title:'Загрузить анализ',type:'analysis'}]:section==='food'?[{title:'Добавить рецепт',type:'recipe'},{title:'Добавить блюдо',type:'dish'}]:section==='home'?[{title:'Добавить задачу',type:'homeTask'},{title:'Добавить идею',type:'homeTask',category:'Идеи'}]:null;
- const links=notes?[navigationItems[0],{path:'/tasks',icon:'tasks',title:'Дела'} as const,navigationItems[2],navigationItems[1],navigationItems[4]]:navigationItems;
- return <><View style={{backgroundColor:theme==='minimal'?minimalSurfaces.navigation:C.paper,borderTopWidth:1,borderColor:theme==='minimal'?'#c9ced8':'#eeece9',flexDirection:'row',paddingHorizontal:10,paddingTop:8,paddingBottom:10,minHeight:70,...(notes?{marginHorizontal:20,marginBottom:12,borderRadius:20,borderTopWidth:0}:{})}}>{links.map(x=><Pressable key={x.path} accessibilityRole="tab" accessibilityLabel={x.title||'Добавить'} aria-selected={path===x.path} accessibilityState={{selected:path===x.path}} onPress={()=>x.icon==='plus'?setAdd(true):path!==x.path&&router.push(x.path as any)} style={{flex:1,alignItems:'center',justifyContent:'center',gap:4}}>{x.icon==='plus'?<View style={{width:49,height:49,borderRadius:25,backgroundColor:theme==='mist'?'#6d72cf':theme==='minimal'?'#fff':'#786c63',alignItems:'center',justifyContent:'center'}}><Icon name="plus" color={theme==='minimal'?C.ink:'#fff'} size={26}/></View>:<><Icon name={x.icon} filled={x.icon==='house'&&path==='/'} color={path===x.path?C.ink:'#797985'} size={22}/><T size={9} color={path===x.path?C.ink:'#797985'}>{x.title}</T></>}</Pressable>)}</View><ConfirmationSheet visible={add} title="Добавить" onClose={close} headerTitle={<View style={{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',paddingLeft:36}}><T bold size={20}>Добавить</T><Action icon="mic" label={listening?'Остановить диктовку':'Диктовать голосом'} color={listening?C.red:C.ink} onPress={dictate}/></View>}>
+ const warm=theme==='warm';
+ // Soft Future keeps one LIFE OS bar everywhere; «Дела» is reached from a button inside «Работа» instead.
+ const links=notes&&!warm&&theme!=='soft'?[navigationItems[0],{path:'/tasks',icon:'tasks',title:'Дела'} as const,navigationItems[2],navigationItems[1],navigationItems[4]]:navigationItems;
+ const safeBottom=useSafeAreaInsets().bottom;
+ // Dark theme: the old grey (#797985) almost vanished on the dark bar; a lighter lavender grey keeps ~4.8:1 contrast.
+ const inactive=theme==='dark'?'#A9A3C2':'#797985';
+ return <>{theme==='soft'?<SoftNavBar links={links} path={path} open={add} onNavigate={target=>path==='/'?softNavigate(target as any):router.push(target as any)} onAdd={()=>setAdd(true)}/>:<View style={{backgroundColor:theme==='minimal'?minimalSurfaces.navigation:C.paper,borderTopWidth:1,borderColor:warm?C.line:theme==='minimal'?'#c9ced8':'#eeece9',flexDirection:'row',paddingHorizontal:10,paddingTop:8,paddingBottom:10,minHeight:70,...(warm?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:32,borderWidth:1}:notes?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:20,borderTopWidth:0}:{paddingBottom:10+safeBottom})}}>{links.map(x=><Pressable key={x.path} accessibilityRole="tab" accessibilityLabel={x.title||'Добавить'} aria-selected={path===x.path} accessibilityState={{selected:path===x.path}} onPress={()=>x.icon==='plus'?setAdd(true):path!==x.path&&router.push(x.path as any)} style={{flex:1,alignItems:'center',justifyContent:'center',gap:4}}>{x.icon==='plus'?<View style={{width:49,height:49,borderRadius:25,backgroundColor:warm?warmSurfaces.selection:theme==='mist'?'#6d72cf':theme==='minimal'?'#fff':'#786c63',alignItems:'center',justifyContent:'center'}}><Icon name="plus" color={warm||theme==='minimal'?C.ink:'#fff'} size={26}/></View>:<><Icon name={x.icon} filled={!warm&&x.icon==='house'&&path==='/'} color={warm?warmSurfaces.icon:path===x.path?C.ink:inactive} size={warm?24:22}/>{!warm&&<T size={9} color={path===x.path?C.ink:inactive}>{x.title}</T>}</>}</Pressable>)}</View>}<ConfirmationSheet visible={add} title="Добавить" onClose={close} headerTitle={<View style={{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',paddingLeft:36}}><T bold size={20}>Добавить</T><Action icon="mic" label={listening?'Остановить диктовку':'Диктовать голосом'} color={listening?C.red:C.ink} onPress={dictate}/></View>}>
  {listening&&<T center size={12}>Слушаю…</T>}
  {!!voiceError&&<T center size={12} color={C.red}>{voiceError}</T>}
  {(!!spoken||!!voiceError)&&<TextInput accessibilityLabel="Текст записи" value={spoken} onChangeText={setSpoken} placeholder="Название записи" maxLength={200} style={{minHeight:44,padding:10,borderRadius:12,backgroundColor:C.paper,color:C.ink,textAlign:'center'}}/>}
- {choices?choices.map(choice=><AddMenuRow key={choice.title} title={choice.title} onPress={()=>openEditor(section,choice.type,choice.category)}/>):sections.filter(s=>!section||s.id===section).map(s=><AddMenuRow key={s.id} title={s.title.replace('\n',' ')} onPress={()=>openEditor(s.id)}/>)}{section&&<Primary quiet onPress={()=>{const voice=spoken.trim()?stageVoiceDraft(spoken.trim()):undefined;close();router.push({pathname:'/add',params:{voice}});}}>Другой раздел</Primary>}</ConfirmationSheet></>;
+ {choices?choices.map((choice,index)=>{const row=<AddMenuRow key={choice.title} title={choice.title} onPress={()=>openEditor(section,choice.type,choice.category)}/>;return theme==='soft'?<StaggerIn key={choice.title} index={index}>{row}</StaggerIn>:row;}):sections.filter(s=>!section||s.id===section).map((s,index)=>{const row=<AddMenuRow key={s.id} title={s.title.replace('\n',' ')} onPress={()=>openEditor(s.id)}/>;return theme==='soft'?<StaggerIn key={s.id} index={index}>{row}</StaggerIn>:row;})}{section&&<Primary quiet onPress={()=>{const voice=spoken.trim()?stageVoiceDraft(spoken.trim()):undefined;close();router.push({pathname:'/add',params:{voice}});}}>Другой раздел</Primary>}</ConfirmationSheet></>;
 }
 
 export function AddMenuRow({title,onPress}:{title:string;onPress:()=>void}){const C=usePlannerColors();
@@ -72,4 +85,51 @@ export function AddMenuRow({title,onPress}:{title:string;onPress:()=>void}){cons
   <Icon name="plus" size={18} color={C.ink}/>
   <T size={14} center style={{flexShrink:1}}>{title}</T>
  </Pressable>;
+}
+
+/**
+ * Soft Future bottom bar: dark glass, same items as before. A soft pill slides to the active item;
+ * the other icons stay still. Blur is applied on web only (native has no blur without extra libraries).
+ */
+function SoftNavBar({links,path,open,onNavigate,onAdd}:{links:readonly {path:string;icon:string;title:string}[];path:string;open:boolean;onNavigate:(path:string)=>void;onAdd:()=>void}){
+ const reduced=useReducedMotion();
+ // «+» turns into «×» while the add panel is open
+ const turn=useRef(new Animated.Value(0)).current;
+ useEffect(()=>{Animated.timing(turn,{toValue:open?1:0,duration:reduced?0:motion.menu,easing:ease([0.2,0,0,1]),useNativeDriver:true}).start();},[open,reduced]);
+ const [width,setWidth]=useState(0);
+ const safeBottom=useSafeAreaInsets().bottom;
+ const index=links.findIndex(x=>x.path===path&&x.icon!=='plus');
+ const slot=width/links.length;
+ const x=useRef(new Animated.Value(0)).current;
+ const visible=useRef(new Animated.Value(0)).current;
+ const placed=useRef(false);
+ useEffect(()=>{
+  if(!slot)return;
+  const target=Math.max(index,0)*slot;
+  Animated.timing(visible,{toValue:index>=0?1:0,duration:reduced?0:motion.tab,useNativeDriver:true}).start();
+  if(!placed.current||reduced){x.setValue(target);placed.current=true;return;}
+  Animated.spring(x,{toValue:target,...spring.snappy,useNativeDriver:true}).start();
+ },[index,slot,reduced,x,visible]);
+ // The strip behind the floating bar continues the screen background (gradient end on home, light wash elsewhere).
+ return <View style={{backgroundColor:path==='/'?gradients.background[gradients.background.length-1]:'#e8dde3'}}><View onLayout={e=>setWidth(e.nativeEvent.layout.width)} style={{flexDirection:'row',marginHorizontal:16,marginBottom:Math.max(12,safeBottom),paddingVertical:7,borderRadius:30,
+  backgroundColor:softHome.navBar,borderWidth:1,borderColor:softHome.navLine,...shadows[3],
+  ...(Platform.OS==='web'?{backdropFilter:`blur(${blur.bar}px) saturate(140%)`} as object:{})}}>
+  {slot>0&&<Animated.View pointerEvents="none" style={{position:'absolute',top:7,bottom:7,left:0,width:slot,paddingHorizontal:8,opacity:visible,transform:[{translateX:x}]}}>
+   <View style={{flex:1,borderRadius:22,backgroundColor:softHome.navIndicator}}/>
+  </Animated.View>}
+  {links.map(item=>{
+   const active=item.path===path;
+   if(item.icon==='plus')return <View key={item.path} style={{flex:1,alignItems:'center',justifyContent:'center'}}>
+    <SoftPressable accessibilityRole="button" accessibilityLabel="Добавить" onPress={onAdd}
+     style={{width:48,height:48,borderRadius:24,backgroundColor:softHome.plus,alignItems:'center',justifyContent:'center',...shadows[2]}}>
+     <Animated.View style={{transform:[{rotate:turn.interpolate({inputRange:[0,1],outputRange:['0deg','45deg']})}]}}><Icon name="plus" color={softHome.plusInk} size={24} strokeWidth={1.6}/></Animated.View>
+    </SoftPressable>
+   </View>;
+   return <Pressable key={item.path} accessibilityRole="tab" accessibilityLabel={item.title} aria-selected={active} accessibilityState={{selected:active}}
+    onPress={()=>{if(!active)onNavigate(item.path);}} style={{flex:1,minHeight:52,alignItems:'center',justifyContent:'center',gap:3}}>
+    <Icon name={item.icon as any} color={active?softHome.text:softHome.muted} size={21} strokeWidth={1.5}/>
+    <T size={9} color={active?softHome.text:softHome.muted}>{item.title}</T>
+   </Pressable>;
+  })}
+ </View></View>;
 }

@@ -18,3 +18,8 @@ dist-pages/
 .DS_Store
 
 .pnpm-store/
+
+# Built bundles, archives and Hermes bytecode — never commit
+apps/mobile/dist*/
+*.tgz
+*.hbc

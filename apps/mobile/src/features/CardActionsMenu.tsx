@@ -8,6 +8,8 @@ import {useApp} from '../context';
 import {IconButton} from '../components/Icon';
 import {SectionHeader} from '../components/AppShell';
 import {Button,Label,useColors} from '../design/primitives';
+import {SoftSheet,useSoftMotion} from '../design/motion';
+import {shadows} from '../design/system';
 
 /** Every destructive action is soft deletion. Files stay until an explicit purge. */
 export function CardActionsMenu({item,onEdit,onChanged}:{item:Item;onEdit?:()=>void;onChanged?:()=>void}){
@@ -15,8 +17,14 @@ export function CardActionsMenu({item,onEdit,onChanged}:{item:Item;onEdit?:()=>v
   const lifecycle=getLifecycle(item);
   const done=(action:()=>Promise<unknown>)=>{run(action).then(()=>{setOpen(false);onChanged?.();}).catch(()=>{});};
   const categories:readonly(Category|ProductCategory)[]=item.kind==='product'?['beauty','clothing','tech','home','other']:['general','home','work','shopping','entertainment','food'];
+  const softMotion=useSoftMotion();
+  const panel={width:'100%' as const,maxWidth:680,maxHeight:'85%' as const,backgroundColor:c.bg,borderTopLeftRadius:24,borderTopRightRadius:24,padding:20};
+  // Soft Future: the menu rises softly above a fading scrim and has a higher depth (elevated shadow); other themes unchanged.
+  const menuShell=(content:React.ReactNode)=>softMotion.enabled
+   ?<SoftSheet visible={open} onRequestClose={()=>setOpen(false)} panelStyle={[panel,{alignSelf:'center'},shadows[3]]}>{content}</SoftSheet>
+   :<Modal visible={open} transparent animationType="fade" onRequestClose={()=>setOpen(false)}><View style={{flex:1,backgroundColor:'#0005',justifyContent:'flex-end',alignItems:'center'}}><View style={panel}>{content}</View></View></Modal>;
   return <><IconButton name="more" label={t('cardActions')+': '+item.title} disabled={busy} onPress={()=>{setStep('menu');setOpen(true);}}/>
-    <Modal visible={open} transparent animationType="fade" onRequestClose={()=>setOpen(false)}><View style={{flex:1,backgroundColor:'#0005',justifyContent:'flex-end',alignItems:'center'}}><View style={{width:'100%',maxWidth:680,maxHeight:'85%',backgroundColor:c.bg,borderTopLeftRadius:24,borderTopRightRadius:24,padding:20}}>
+    {menuShell(<>
       <SectionHeader title={t(step==='category'?'category':'cardActions')} onBack={()=>step==='menu'?setOpen(false):setStep('menu')}/>
       <ScrollView contentContainerStyle={{gap:12,paddingBottom:24}}><Label weight="600">{item.title}</Label>
       {step==='category'?categories.map(category=><Button key={category} quiet onPress={()=>done(()=>repo.categorize(item.id,category))}>{t(category)}</Button>):step==='trash'?<><Label>{t('trashQuestion')}</Label><Button danger onPress={()=>done(()=>repo.setLifecycle(item.id,'trashed'))}>{t('delete')}</Button></>:<>
@@ -29,6 +37,6 @@ export function CardActionsMenu({item,onEdit,onChanged}:{item:Item;onEdit?:()=>v
         {lifecycle!=='trashed'&&<Button quiet onPress={()=>setStep('trash')}>{t('delete')}</Button>}
       </>}
       <Button quiet onPress={()=>setOpen(false)}>{t('close')}</Button></ScrollView>
-    </View></View></Modal>
+    </>)}
   </>;
 }

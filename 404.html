@@ -1,10 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <!-- viewport-fit=cover: the app reaches the screen edges, safe areas are padded by the layout.
+         maximum-scale=1 stops iOS from zooming in when a text field gets focus; pinch zoom still works on iOS. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <title>LIFE OS</title>
+    <meta name="description" content="LIFE OS — личный органайзер. Записи хранятся на этом устройстве." />
+    <meta name="life-os-base" content="/life-os" />
+    <link rel="manifest" href="/life-os/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/life-os/icons/favicon-48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/life-os/icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#35343D" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LIFE OS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
@@ -23,13 +36,25 @@
         flex: 1;
       }
     </style>
+    <style>
+      /* Graphite while the app starts, matching the Soft Future home screen; each screen paints its own background. */
+      html, body { background: #35343D; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+    </style>
   </head>
 
   <body>
-    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
-    <noscript> You need to enable JavaScript to run this app. </noscript>
-    <!-- The root element for your Expo app. -->
+    <noscript> LIFE OS работает с включённым JavaScript. </noscript>
     <div id="root"></div>
-  <script src="/life-os/_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js" defer></script><script src="/life-os/_expo/static/js/web/__common-e8cc21a7f8e341533fb4a8959b393f47.js" defer></script><script src="/life-os/_expo/static/js/web/entry-33a25b13d7ab234a24d6ab92ba2566fa.js" defer></script>
+    <script>
+      /* Installable web app: cache the app files for offline start and quick updates. Records stay in IndexedDB and are never cached here. */
+      (function () {
+        var base = document.querySelector('meta[name="life-os-base"]').content;
+        if (base.indexOf('%') !== -1 || !('serviceWorker' in navigator)) return;
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register(base + '/sw.js', { scope: base + '/' }).catch(function () {});
+        });
+      })();
+    </script>
+  <script src="/life-os/_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js" defer></script><script src="/life-os/_expo/static/js/web/__common-5f2cd4303661bb27b3d0c5d4b6428581.js" defer></script><script src="/life-os/_expo/static/js/web/entry-00dbe59a113fb80fc23367e77a5302a4.js" defer></script>
 </body>
 </html>

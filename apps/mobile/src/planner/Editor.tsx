@@ -38,7 +38,7 @@ export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;c
  const toggleFavorite=()=>patch(item.id,{favorite:!item.favorite}).catch(()=>{});
  const titleInput=<TextInput accessibilityLabel="Заголовок заметки" value={title}
   onChangeText={value=>{setTitle(value);changed(draft.current.html,draft.current.text);}} onBlur={save}
-  style={{fontFamily:'TenorSans',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0}}/>;
+  style={{fontFamily:'Inter',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0}}/>;
  const files=<AttachmentPicker documentsOnly={item.section==='work'} files={item.attachments} onChange={values=>patch(item.id,{attachments:values}).catch(()=>{})}/>;
  const links=<Input label="Ссылки" value={item.data.links??''} onChange={value=>patch(item.id,{data:{links:value}}).catch(()=>{})}/>;
  const updated=new Date(item.updatedAt);

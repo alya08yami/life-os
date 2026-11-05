@@ -33,7 +33,7 @@ export type Item = Base & (
 );
 export type Suggestion = {kind:Kind; category:Category; source:'rule'};
 export type ItemInput = {text:string; title?:string; tags?:string[]; kind?:Kind; category?:Category; sourceUrl?:string; attachments?:Attachment[]; details?:unknown; id?:string};
-export type Settings = {locale:Locale; theme:'light'|'dark'|'minimal'|'mist'};
+export type Settings = {locale:Locale; theme:'light'|'dark'|'minimal'|'mist'|'warm'|'soft'};
 export type State = {schemaVersion:1; planner?:PlannerState; items:Item[];vault?:EncryptedVault;healthRecords?:MedicalRecord[]; settings:Settings; appliedTemplates:string[];uiPreferences?:Record<string,string>};
 export function initialState():State { return {schemaVersion:1,items:[],settings:{locale:'ru',theme:'light'},appliedTemplates:[]}; }
 /** Domain state is JSON data on both storage adapters; no Hermes structuredClone dependency. */
@@ -142,7 +142,7 @@ export function makeItem(input:ItemInput):Item {
 }
 export function validateState(value:unknown):State {
   const s=value as State;
-  if(!s||s.schemaVersion!==1||!Array.isArray(s.items)||!Array.isArray(s.appliedTemplates)||!s.settings||!['ru','uk','en'].includes(s.settings.locale)||!['light','dark','minimal','mist'].includes(s.settings.theme))throw new Error('storage_invalid');
+  if(!s||s.schemaVersion!==1||!Array.isArray(s.items)||!Array.isArray(s.appliedTemplates)||!s.settings||!['ru','uk','en'].includes(s.settings.locale)||!['light','dark','minimal','mist','warm','soft'].includes(s.settings.theme))throw new Error('storage_invalid');
   if(s.uiPreferences!==undefined&&(typeof s.uiPreferences!=='object'||s.uiPreferences===null||Array.isArray(s.uiPreferences)||Object.entries(s.uiPreferences).some(([k,v])=>k.length>80||typeof v!=='string'||v.length>120)||Object.keys(s.uiPreferences).length>50))throw new Error('storage_invalid');
   if(s.planner!==undefined)validatePlanner(s.planner);
   if(s.vault!==undefined)validateVault(s.vault);

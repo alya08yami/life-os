@@ -4,7 +4,9 @@ import {selectProducts,selectComparison,pricePresentation,formatPrice} from '@li
 import {useApp} from '../src/context';import {demoProducts,productModel} from '../src/catalog/demo';import type {ProductModel} from '../src/catalog/demo';
 import {AppShell} from '../src/components/AppShell';import {CatalogImage} from '../src/components/CatalogImage';import {Heading,Label,Card,Empty,useColors} from '../src/design/primitives';import type {TextKey} from '../src/i18n';
 
-export default function CompareProducts(){
+// Part of «Покупки и желания»: frozen, keeps its current look under every theme.
+export default function CompareProducts(){return <CompareProductsScreen/>;}
+function CompareProductsScreen(){
   const {mode,ids}=useLocalSearchParams<{mode?:string;ids?:string}>();const {state,t,busy}=useApp();const {setComparison}=useCatalog();const c=useColors();const demo=mode==='demo';
   const personal=selectProducts(state.items.filter(i=>i.inboxStatus==='confirmed'),{filter:'all',sort:'title',currency:'UAH'});
   const products=demo?demoProducts:personal.map(productModel);

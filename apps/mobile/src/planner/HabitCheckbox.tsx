@@ -29,7 +29,7 @@ function playChime(){
   }catch{}
 }
 
-export function HabitCheckbox({checked,onPress}:{checked:boolean;onPress:()=>void}){
+export function HabitCheckbox({checked,onPress,outline}:{checked:boolean;onPress:()=>void;outline?:string}){
   const pulse=useRef(new Animated.Value(1)).current;
   const reduced=useRef(false);
   useEffect(()=>{
@@ -45,7 +45,7 @@ export function HabitCheckbox({checked,onPress}:{checked:boolean;onPress:()=>voi
     return ()=>{listener.remove();pulse.stopAnimation();};
   },[pulse]);
   return <View style={{alignItems:'center',justifyContent:'center',zIndex:1}}>
-    <StatusCheckbox checked={checked} tone="green" onPress={()=>{
+    <StatusCheckbox checked={checked} tone="green" outline={outline} onPress={()=>{
       if(!checked){
         playChime();
         if(!reduced.current){

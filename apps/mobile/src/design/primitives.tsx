@@ -4,8 +4,9 @@ import {View,Text,Pressable,TextInput} from 'react-native';
 import type {TextInputProps,ViewStyle} from 'react-native';
 import {useApp} from '../context';
 import {colors,tokens} from './tokens';
+import {useEffectiveTheme} from './scope';
 export const palettes=colors;
-export function useColors(){return colors[useApp().state.settings.theme];}
+export function useColors(){return colors[useEffectiveTheme()];}
 export function Label({children,muted=false,size=14,weight='400',align='left'}:{children:React.ReactNode;muted?:boolean;size?:number;weight?:'400'|'500'|'600'|'700'|'800';align?:'left'|'center'|'right'}){const c=useColors();return <Text style={{color:muted?c.muted:c.text,fontFamily:tokens.font.body,fontSize:size,fontWeight:weight,lineHeight:size*1.5,textAlign:align}}>{children}</Text>;}
 export function Heading({children,size=30}:{children:React.ReactNode;size?:number}){const c=useColors();return <Text accessibilityRole="header" style={{fontFamily:tokens.font.heading,color:c.text,fontSize:size,fontWeight:'700',letterSpacing:-.8,lineHeight:size*1.2}}>{children}</Text>;}
 export function Button({children,onPress,quiet=false,danger=false,disabled=false,testID}:{children:React.ReactNode;onPress:()=>void;quiet?:boolean;danger?:boolean;disabled?:boolean;testID?:string}){const c=useColors();const {busy}=useApp();const blocked=disabled||busy;return <Pressable testID={testID} accessibilityRole="button" aria-disabled={blocked} disabled={blocked} onPress={onPress} style={({pressed})=>({...glassSurface(c.bg==='#1B2037'),...gloss(!quiet&&!danger,c.bg==='#1B2037'),paddingHorizontal:18,paddingVertical:13,borderRadius:tokens.radius.control,backgroundColor:quiet?c.soft:danger?c.danger:c.accent,opacity:blocked?.45:pressed?.7:1,alignItems:'center',justifyContent:'center',minHeight:44})}><Text style={{fontFamily:tokens.font.body,fontSize:13,fontWeight:'600',color:quiet?c.text:danger?'#FFFFFF':c.onAccent}}>{children}</Text></Pressable>;}

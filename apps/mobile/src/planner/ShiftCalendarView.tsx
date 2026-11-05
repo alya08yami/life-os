@@ -1,4 +1,4 @@
-import {calendarPeriodFill as periodPink,minimalSurfaces,mistCalendar} from '../design/themes';
+import {calendarPeriodFill as periodPink,minimalSurfaces,mistCalendar,warmSurfaces} from '../design/themes';
 import {useApp} from '../context';
 import {usePlannerColors} from './ui';
 import Svg,{Circle,Path} from 'react-native-svg';
@@ -17,7 +17,8 @@ export const shiftPink='#f5dce5';
  *  • marks      → tiny icons under the number: red heart (sex), violet sad face (migraine)
  *  • today      → number in a circle (dark; white on an event day)
  */
-const forecastRose='#cc467d', fertileMint='#e6f3ec', ovulationMint='#c9e8d8';
+const forecastRose='#cc467d';
+const ovulationDot={width:6,height:6,borderRadius:3,backgroundColor:'#429568'} as const;
 export const shiftBlue=shiftColors[1];
 const markerStyles={migraine:{icon:'frown',color:'#8e5cc4'},personal:{icon:'heart',color:'#e0435e'},event:{icon:'flag',color:'#2c3550'}} as const;
 export const eventFill='#2c3550';
@@ -56,8 +57,9 @@ export function MigraineMark({size=11}:{size?:number}){
  </Svg>;
 }
 /** Marks under the day number. Events are shown by the cell fill; their hidden node keeps the order for tests and screen readers. */
-export function MarkDots({markers,size=11}:{markers:MarkKind[];size?:number}){
+export function MarkDots({markers,size=11,ovulation=false}:{markers:MarkKind[];size?:number;ovulation?:boolean}){
  return <View testID="shift-markers" style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:2,height:size+2}}>
+  {ovulation&&<View testID="marker-ovulation" style={ovulationDot}/>}
   {markers.map(kind=><View key={kind} testID={'marker-'+kind} style={kind==='event'?{width:0,height:0}:undefined}>
    {kind==='migraine'?<MigraineMark size={size}/>:kind==='personal'?<HeartMark size={size}/>:null}
   </View>)}
@@ -72,7 +74,7 @@ export function PeriodBar({day}:{day:{cycle?:unknown;events?:unknown[]}}){
 export const dayOutline=(day:{forecast?:string})=>day.forecast==='period'?{borderColor:forecastRose,borderWidth:1.5,borderStyle:'dashed' as const}:undefined;
 export const hasEvent=(day:{events?:unknown[]})=>!!day.events?.length;
 export function dayTint(day:{cycle?:unknown;forecast?:string;events?:unknown[]},minimal=false,mist=false){
- return hasEvent(day)?(minimal?minimalSurfaces.event:mist?mistCalendar.event:eventFill):day.cycle?(mist?mistCalendar.period:periodPink):day.forecast==='ovulation'?(minimal?minimalSurfaces.ovulation:mist?mistCalendar.ovulation:ovulationMint):day.forecast==='fertile'?(minimal?minimalSurfaces.fertile:mist?mistCalendar.fertile:fertileMint):undefined;
+ return hasEvent(day)?(minimal?minimalSurfaces.event:mist?mistCalendar.event:eventFill):day.cycle?(mist?mistCalendar.period:periodPink):undefined;
 }
 export function Marker({kind,size=13}:{kind:keyof typeof markerStyles;size?:number}){
  const {icon,color}=markerStyles[kind];
@@ -90,6 +92,7 @@ export function MonthGrid({data,month,today,selected,onSelect,onMonth,mode='grid
  const {theme}=useApp().state.settings;
  const minimal=theme==='minimal';
  const mist=theme==='mist';
+ const warm=theme==='warm';
  const dates=monthCells(month);
  const swipe=React.useMemo(()=>PanResponder.create({
   onMoveShouldSetPanResponderCapture:(_,g)=>Math.abs(g.dx)>12&&Math.abs(g.dx)>1.5*Math.abs(g.dy),
@@ -112,17 +115,17 @@ export function MonthGrid({data,month,today,selected,onSelect,onMonth,mode='grid
     const inMonth=date.startsWith(month);
     return <Pressable key={date} testID={'shift-day-'+date} accessibilityRole="button" aria-selected={day.selected} accessibilityState={{selected:day.selected}} accessibilityLabel={[date,shiftLabels[day.shift],day.cycle&&'месячные',day.forecast==='period'&&'прогноз месячных',day.forecast==='ovulation'&&'предполагаемая овуляция',day.forecast==='fertile'&&'фертильное окно',day.migraine&&'мигрень',day.markers.includes('personal')&&'половой акт',day.events.length>0&&'событие',day.today&&'сегодня'].filter(Boolean).join(', ')} onPress={()=>onSelect(date)} style={{
      flex:1,minWidth:0,aspectRatio:.77,maxHeight:69,borderRadius:8,borderWidth:1,
-     borderColor:mist?'#edecf8':'#efeae6',backgroundColor:dayTint(day,minimal,mist)??(minimal?'transparent':C.paper),opacity:inMonth?1:day.forecast==='period'?.75:.42,overflow:'hidden',
-     ...dayOutline(day),...(day.selected?{borderColor:minimal?C.ink:hasEvent(day)?'#b9a8ff':'#8f72b8',borderWidth:hasEvent(day)?2:1.5,borderStyle:'solid' as const}:{}),
+     borderColor:warm?C.line:mist?'#edecf8':'#efeae6',backgroundColor:dayTint(day,minimal,mist)??(minimal?'transparent':C.paper),opacity:inMonth?1:day.forecast==='period'?.75:.42,overflow:'hidden',
+     ...dayOutline(day),...(day.selected?{borderColor:warm?warmSurfaces.selection:minimal?C.ink:hasEvent(day)?'#b9a8ff':'#8f72b8',borderWidth:hasEvent(day)?2:1.5,borderStyle:'solid' as const}:{}),
      alignItems:'center',justifyContent:'flex-start',paddingTop:8,gap:3,
     }}>
      <ShiftStripe shift={day.shift}/>
      <PeriodBar day={day}/>
-     <View style={{width:24,height:24,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:day.today?(minimal?minimalSurfaces.today:hasEvent(day)?'#fff':mist?mistCalendar.event:'#1f2433'):'transparent'}}>
+     <View style={{width:24,height:24,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:day.today?(minimal?minimalSurfaces.today:hasEvent(day)?'#fff':mist?mistCalendar.event:warm?warmSurfaces.selection:'#1f2433'):'transparent'}}>
       {day.today&&<View testID="shift-today" style={{position:'absolute',width:0,height:0}}/>}
       <T size={14} bold={day.selected||day.today||hasEvent(day)} color={minimal?C.ink:hasEvent(day)?(day.today?(mist?C.ink:eventFill):'#fff'):day.today?'#fff':C.ink}>{Number(date.slice(-2))}</T>
      </View>
-     <MarkDots markers={day.markers}/>
+     <MarkDots markers={day.markers} ovulation={day.forecast==='ovulation'}/>
     </Pressable>;
    })}
   </View>)}</View></>}
@@ -173,7 +176,7 @@ export function ShiftLegend(){
  const legend:[React.ReactNode,string][]=[
   [<Swatch stripe={firstShiftStripe}/>,'Первая смена'],[<Swatch stripe={secondShiftStripe}/>,'Вторая смена'],[<Swatch fill={theme==='mist'?mistCalendar.period:periodPink}/>,'Месячные'],
   [<Swatch fill={theme==='minimal'?minimalSurfaces.event:theme==='mist'?mistCalendar.event:eventFill}/>,'Событие'],[<MigraineMark size={13}/>,'Мигрень'],[<HeartMark size={13}/>,'Половой акт'],
-  [<Swatch outline={forecastRose}/>,'Прогноз месячных'],[<Swatch fill={theme==='minimal'?minimalSurfaces.fertile:theme==='mist'?mistCalendar.fertile:fertileMint}/>,'Фертильное окно'],[<Swatch fill={theme==='minimal'?minimalSurfaces.ovulation:theme==='mist'?mistCalendar.ovulation:ovulationMint}/>,'Овуляция'],
+  [<Swatch outline={forecastRose}/>,'Прогноз месячных'],[<View style={ovulationDot}/>,'Прогноз овуляции'],
  ];
  return <View style={{...cardStyle,backgroundColor:theme==='minimal'?minimalSurfaces.calendarCard:C.paper,borderColor:C.line,padding:10,gap:9}}>{[0,3,6].map(start=><View key={start} style={{flexDirection:'row',gap:3}}>
   {legend.slice(start,start+3).map(([icon,label])=><View key={label} style={{flex:1,flexDirection:'row',alignItems:'center',gap:6}}>
