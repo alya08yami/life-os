@@ -3,6 +3,9 @@ import {dayOutline} from './ShiftCalendarView';
 import {useApp} from '../context';
 import {calendarPeriodFill,mistCalendar} from '../design/themes';
 import {usePlannerColors} from './ui';
+import {useSoftMotion} from '../design/motion';
+import {SoftPressable} from '../design/SoftPressable';
+import {palette} from '../design/system';
 import {MealPlan} from './MealPlan';
 import {useStepState,useTabState} from './navigation';
 import {object} from './seed';
@@ -18,6 +21,8 @@ export function NotesGrid({items,open,tab}:Pick<ListProps,'items'|'open'>&{tab:s
   [item.title,item.description].join(' ').toLowerCase().includes(query.trim().toLowerCase()))
   .sort((a,b)=>(newest?1:-1)*b.updatedAt.localeCompare(a.updatedAt));
  const pinned=rows.filter(item=>item.pinned);
+ const soft=useSoftMotion().enabled;
+ if(soft)return <SoftNotes rows={rows} pinned={pinned} open={open} query={query} setQuery={setQuery} newest={newest} setNewest={setNewest}/>;
  const grid=(notes:RecordObject[])=><View style={{flexDirection:'row',flexWrap:'wrap',marginHorizontal:-5}}>
   {notes.map(item=><View key={item.id} style={{width:'33.333%',padding:5}}>
    <View style={{flex:1,borderRadius:15,padding:10,backgroundColor:C.paper}}>
@@ -59,6 +64,65 @@ export function NotesGrid({items,open,tab}:Pick<ListProps,'items'|'open'>&{tab:s
     </Pressable>
    </View>
    {rows.length?grid(rows):<EmptyState text={query?'Заметки не найдены':'Пока нет заметок'}/>}
+  </View>
+ </>;
+}
+/**
+ * «Работа и идеи» in Soft Future: pinned notes in a compact horizontal strip, all other notes in two readable columns.
+ * A pinned note is shown once (in the strip) — only the presentation changes; search, sorting and pinning are the same.
+ */
+function SoftNotes({rows,pinned,open,query,setQuery,newest,setNewest}:{rows:RecordObject[];pinned:RecordObject[];open:(o:RecordObject)=>void;query:string;setQuery:(v:string)=>void;newest:boolean;setNewest:(f:(v:boolean)=>boolean)=>void}){
+ const C=usePlannerColors();const {patch}=usePlanner();
+ const rest=rows.filter(item=>!item.pinned);
+ const [width,setWidth]=useState(0);
+ const columns=width>=600?3:2;
+ const card={backgroundColor:'rgba(251,249,250,0.94)',borderRadius:15,borderWidth:1,borderColor:'rgba(41,38,45,0.06)'};
+ const preview=(item:RecordObject)=>item.description.trim()||'Заметка без текста';
+ const pin=(item:RecordObject)=><Pressable accessibilityRole="button" accessibilityLabel={(item.pinned?'Открепить: ':'Закрепить: ')+item.title}
+  accessibilityState={{selected:!!item.pinned}} hitSlop={6} onPress={()=>patch(item.id,{pinned:!item.pinned}).catch(()=>{})}
+  style={{width:36,height:36,alignItems:'center',justifyContent:'center',marginTop:-8,marginRight:-8}}>
+  <Icon name="bookmark" size={15} color={item.pinned?palette.mauve:'#a39aa2'} filled={!!item.pinned}/>
+ </Pressable>;
+ return <>
+  <View style={{flexDirection:'row',alignItems:'center',gap:9,borderRadius:13,backgroundColor:'rgba(251,249,250,0.94)',paddingHorizontal:12}}>
+   <Icon name="search" size={18} color={palette.inkMuted}/>
+   <TextInput value={query} onChangeText={setQuery} accessibilityLabel="Поиск по заметкам" placeholder="Поиск по заметкам"
+    placeholderTextColor={C.muted} style={{flex:1,minHeight:44,fontFamily:'Inter',fontSize:14,color:C.ink}}/>
+  </View>
+  {pinned.length>0&&<View style={{gap:8,marginTop:6}}>
+   <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between'}}>
+    <T size={17} bold>Закреплено</T><T size={12} muted>{pinned.length}</T>
+   </View>
+   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8,paddingRight:4}}>
+    {pinned.map(item=><SoftPressable key={item.id} accessibilityRole="button" accessibilityLabel={item.title} onPress={()=>open(item)}
+     style={{...card,width:156,paddingVertical:10,paddingLeft:12,paddingRight:10}}>
+     <View style={{flexDirection:'row',alignItems:'flex-start',gap:4}}>
+      <T size={14} bold lines={1} style={{flex:1}}>{item.title}</T>{pin(item)}
+     </View>
+     <T size={12} muted lines={1} style={{marginTop:-4}}>{preview(item)}</T>
+    </SoftPressable>)}
+   </ScrollView>
+  </View>}
+  <View style={{gap:8,marginTop:6}}>
+   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+    <T size={17} bold>{pinned.length?'Остальные заметки':'Все заметки'}</T>
+    <Pressable accessibilityRole="button" accessibilityLabel={newest?'Сначала новые':'Сначала старые'} onPress={()=>setNewest(value=>!value)} style={{minHeight:36,justifyContent:'center',paddingHorizontal:6}}>
+     <T muted size={12.5}>По дате {newest?'↓':'↑'}</T>
+    </Pressable>
+   </View>
+   {rest.length?<View onLayout={e=>setWidth(e.nativeEvent.layout.width)} style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+    {width>0&&rest.map(item=><SoftPressable key={item.id} accessibilityRole="button" accessibilityLabel={item.title} onPress={()=>open(item)}
+     style={{...card,width:(width-8*(columns-1))/columns,minHeight:112,padding:12}}>
+     <View style={{flexDirection:'row',alignItems:'flex-start',gap:4}}>
+      <T size={15} bold lines={2} style={{flex:1,lineHeight:19}}>{item.title}</T>{pin(item)}
+     </View>
+     <T size={13} lines={3} color={palette.inkMuted} style={{lineHeight:18,marginTop:2,flex:1}}>{preview(item)}</T>
+     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:8}}>
+      <T size={11.5} color="#8a8189">{new Date(item.updatedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}</T>
+      {item.favorite&&<T size={12} color={palette.mauve}>★</T>}
+     </View>
+    </SoftPressable>)}
+   </View>:<EmptyState text={query?'Заметки не найдены':pinned.length?'Все заметки закреплены':'Пока нет заметок'}/>}
   </View>
  </>;
 }
