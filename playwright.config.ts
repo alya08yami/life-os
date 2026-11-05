@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'./tests',testMatch:'*.spec.ts',workers:1,webServer:[{command:'node scripts/test-api.cjs --fixtures',url:'http://127.0.0.1:8787/api/health',reuseExistingServer:false},{command:'node scripts/serve-web.cjs',url:'http://127.0.0.1:8081',reuseExistingServer:false}],use:{browserName:'chromium',channel:'chrome',launchOptions:{args:['--disable-gpu','--renderer-process-limit=1','--js-flags=--max-old-space-size=128']},viewport:{width:430,height:932},screenshot:'only-on-failure'},reporter:'list'});

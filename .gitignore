@@ -1,0 +1,25 @@
+node_modules/
+.expo/
+.expo-home/
+dist/
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+*.log
+.superpowers/
+assets-manifest.local.json
+
+.local/
+dist-native/
+
+dist-pages/
+.DS_Store
+
+.pnpm-store/
+
+# Built bundles, archives and Hermes bytecode — never commit
+apps/mobile/dist*/
+*.tgz
+*.hbc

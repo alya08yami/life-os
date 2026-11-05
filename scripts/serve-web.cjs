@@ -1,0 +1,7 @@
+const http=require('node:http');const fs=require('node:fs');const path=require('node:path');
+const root=path.resolve(__dirname,'../apps/mobile/dist');
+const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.ttf':'font/ttf','.otf':'font/otf'};
+http.createServer((req,res)=>{if(req.url?.startsWith('/api/')){const headers={...req.headers,host:'127.0.0.1:8787'};const upstream=http.request({host:'127.0.0.1',port:8787,path:req.url,method:req.method,headers},reply=>{res.writeHead(reply.statusCode??502,reply.headers);reply.pipe(res);});upstream.setTimeout(60000,()=>upstream.destroy());upstream.on('error',()=>{if(!res.headersSent)res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'server_unavailable'}));});req.pipe(upstream);return;}let file;try{file=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));}catch{res.writeHead(400).end();return;}
+if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}if(!fs.existsSync(file)||!fs.statSync(file).isFile())file=path.join(root,'index.html');
+fs.readFile(file,(e,data)=>{if(e){res.writeHead(404).end();return;}res.writeHead(200,{'Content-Type':types[path.extname(file)]??'application/octet-stream','Cache-Control':'no-store'});res.end(data);});
+}).listen(8081,'127.0.0.1',()=>console.log('LIFE OS preview: http://127.0.0.1:8081'));

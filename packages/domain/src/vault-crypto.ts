@@ -1,0 +1,4 @@
+import {gcm} from '@noble/ciphers/aes.js';import {pbkdf2Async} from '@noble/hashes/pbkdf2.js';import {sha256} from '@noble/hashes/sha2.js';
+export type VaultKey=CryptoKey|Uint8Array;
+export interface VaultCrypto{random:(length:number)=>Uint8Array<ArrayBuffer>;derive:(password:string,salt:Uint8Array<ArrayBuffer>)=>Promise<Uint8Array>;encrypt:(key:Uint8Array,iv:Uint8Array,plaintext:Uint8Array,aad:Uint8Array)=>Uint8Array;decrypt:(key:Uint8Array,iv:Uint8Array,ciphertext:Uint8Array,aad:Uint8Array)=>Uint8Array}
+export function portableVaultCrypto(random:(length:number)=>Uint8Array<ArrayBuffer>):VaultCrypto{return {random,derive:(password,salt)=>pbkdf2Async(sha256,new TextEncoder().encode(password),salt,{c:600000,dkLen:32,asyncTick:10}),encrypt:(key,iv,plaintext,aad)=>gcm(key,iv,aad).encrypt(plaintext),decrypt:(key,iv,ciphertext,aad)=>gcm(key,iv,aad).decrypt(ciphertext)};}
