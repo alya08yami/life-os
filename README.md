@@ -1,3 +1,13 @@
+# LIFE OS 1.0
+
+Открыть: **https://alya08yami.github.io/life-os/**. Устанавливается на экран «Домой» iPhone как отдельное приложение: [docs/IPHONE_INSTALL.md](docs/IPHONE_INSTALL.md).
+
+Записи хранятся только на устройстве (IndexedDB). Этот репозиторий и GitHub Pages содержат код и сборку приложения, но не личные данные. Резервная копия — в «Профиль → Резервная копия».
+
+Сборка для Pages: `pnpm build:pages`. Результат `apps/mobile/dist-pages` публикуется в корень ветки `main`.
+
+---
+
 # Последние изменения интерфейса — 2 ноября 2026
 
 Фото в деталях товара и фильма уменьшены до компактного превью. В каталоге хотелок доступны весы сравнения с зелёной отметкой и анимацией, выбранные товары открываются через нижнюю панель. В каталоге фильмов есть отдельные быстрые трейлеры и разные иллюстрации к примерам.
@@ -73,3 +83,7 @@ node scripts/expo.cjs export --platform ios --platform android --output-dir dist
 Перед Playwright остановить `pnpm preview`: тесты запускают отдельный API с синтетическими аккаунтами и без AI-провайдера. Они не используют пользовательскую базу браузера.
 
 Полный результат и границы реализации: [docs/FINAL_IMPLEMENTATION.md](docs/FINAL_IMPLEMENTATION.md). Проверки: [docs/verification.md](docs/verification.md). Исходное ТЗ: [docs/requirements/2026-11-02-full-update.md](docs/requirements/2026-11-02-full-update.md). Дизайн: [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md), архитектура: [UI_ARCHITECTURE.md](UI_ARCHITECTURE.md).
+
+## Published app
+
+[Open LIFE OS on GitHub Pages](https://alya08yami.github.io/life-os/).
