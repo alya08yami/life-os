@@ -47,3 +47,37 @@ test('removal touches only the chosen ids and their first-launch history', ()=>{
  assert.deepEqual(next.history.map((h:any)=>h.id),['h2']);
  assert.deepEqual(next.notificationSettings,{a:1});
 });
+
+test('example dishes, check-ups and operations: launch-relative fields must still match', ()=>{
+ // first launch on Wednesday 2026-11-04 → seed week Monday 2026-11-02; fresh reference written on 2030-01-01 (Tuesday → Monday 2029-12-31)
+ const at='2026-11-04T09:00:00.000Z',freshAt='2030-01-01T09:00:00.000Z';
+ const dish=(plan:any[],id:string)=>({id,ownerId:'local',type:'dish',section:'food',title:'Овсянка с ягодами',description:'',status:'active',createdAt:at,updatedAt:at,attachments:[],notes:'',data:{calories:310,plan}}) as any;
+ const checkup=(year:number,id:string)=>({id,ownerId:'local',type:'checkup',section:'health',title:'Терапевт',description:'',status:'active',createdAt:at,updatedAt:at,attachments:[],notes:'',data:{year}}) as any;
+ const tx=(plannedDate:string,id:string)=>({id,ownerId:'local',type:'transaction',section:'finance',title:'Доход · пример',description:'',status:'active',createdAt:at,updatedAt:at,attachments:[],notes:'',data:{direction:'Доходы',amount:239,currency:'$',plannedDate,example:true}}) as any;
+ const filler=Array.from({length:5},(_,i)=>({...checkup(2026,'f'+i),title:'Стоматолог'}));
+ const fresh={version:1,objects:[
+  {...dish([{date:'2029-12-31',meal:'Завтрак'},{date:'2030-01-02',meal:'Обед'}],'r1'),createdAt:freshAt,updatedAt:freshAt},
+  {...checkup(2030,'r2'),createdAt:freshAt,updatedAt:freshAt},{...checkup(2030,'r2b'),title:'Стоматолог',createdAt:freshAt,updatedAt:freshAt},
+  {...tx('2026-10-01','r3'),createdAt:freshAt,updatedAt:freshAt},
+ ],history:[],notificationSettings:{},dismissed:[]} as any;
+ const objects=[
+  dish([{date:'2026-11-02',meal:'Завтрак'},{date:'2026-11-04',meal:'Обед'}],'same-plan'),
+  dish([{date:'2026-11-02',meal:'Завтрак'},{date:'2026-11-11',meal:'Обед'}],'moved-plan'),
+  checkup(2026,'launch-year'),checkup(2027,'other-year'),
+  tx('2026-10-01','same-date'),tx('2026-10-02','other-date'),
+  ...filler,
+ ];
+ const scan=scanDemoRecords({version:1,objects,history:[],notificationSettings:{},dismissed:[]} as any,fresh);
+ const ids=new Set(scan.candidates.map(o=>o.id));
+ for(const id of ['same-plan','launch-year','same-date'])assert.ok(ids.has(id),id+' should be offered');
+ for(const id of ['moved-plan','other-year','other-date'])assert.ok(!ids.has(id),id+' must not be offered');
+});
+
+test('same title in another section or type is never treated as an example', ()=>{
+ const objects=seedNotes.map(o=>clone(o));
+ objects.push(clone(seedNotes[1],{id:'parents-note',section:'parents'}));
+ objects.push(clone(seedNotes[1],{id:'health-type',type:'analysis',section:'health'}));
+ const scan=scanDemoRecords({version:1,objects,history:[],notificationSettings:{},dismissed:[]} as any,fresh);
+ const all=new Set([...scan.candidates.map(o=>o.id),...scan.lookalikes.map(l=>l.object.id)]);
+ assert.ok(!all.has('parents-note')&&!all.has('health-type'));
+});

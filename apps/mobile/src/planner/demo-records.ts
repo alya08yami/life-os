@@ -15,16 +15,29 @@ import type {PlannerState,RecordObject} from '@life-os/domain/planner';
 export type DemoLookalike={object:RecordObject;reason:string};
 export type DemoScan={batchTime?:string;candidates:RecordObject[];lookalikes:DemoLookalike[]};
 
-/** Data fields that legitimately differ between launches (dates of the week, current year). */
-const TIME_FIELDS=new Set(['plan','year','plannedDate']);
+/**
+ * Content is compared field by field. The only values that legitimately depend on the launch moment are made
+ * relative to it instead of being ignored:
+ * - `plan` of example dishes → weekday offset from the Monday of that launch + meal (so any meal the user planned
+ *   on another week, or moved, counts as a change);
+ * - `year` of example check-ups → "the launch year".
+ */
 const signature=(o:Pick<RecordObject,'type'|'section'|'title'>)=>o.type+'\u0000'+o.section+'\u0000'+o.title;
 const stable=(value:unknown):string=>JSON.stringify(value,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
-const dataOf=(o:RecordObject)=>Object.fromEntries(Object.entries(o.data??{}).filter(([k])=>!TIME_FIELDS.has(k)));
+const dayNumber=(date:string)=>Math.round(Date.parse(date.slice(0,10)+'T12:00:00Z')/86400000);
+const mondayNumber=(at:string)=>{const d=new Date(at);const local=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),12));return Math.round(local.getTime()/86400000)-((local.getUTCDay()+6)%7);};
+function dataOf(o:RecordObject,at:string){
+ const data:Record<string,unknown>={...(o.data??{})};
+ if(Array.isArray(data.plan)){const monday=mondayNumber(at);data.plan=(data.plan as {date?:string;meal?:string}[]).map(p=>typeof p?.date==='string'?(dayNumber(p.date)-monday)+'|'+p.meal:stable(p)).sort();}
+ if(o.type==='checkup'&&data.year===new Date(at).getFullYear())data.year='launch-year';
+ return data;
+}
 const attachmentsOf=(o:RecordObject)=>(o.attachments??[]).map(a=>[a.name,a.mime,a.uri]);
 
-function sameContent(a:RecordObject,b:RecordObject){
+/** `a` was written at `aAt`, the reference `b` at `bAt`. */
+function sameContent(a:RecordObject,b:RecordObject,aAt:string,bAt:string){
  return a.description===b.description&&a.status===b.status&&(a.notes??'')===(b.notes??'')&&!!a.pinned===!!b.pinned&&!!a.favorite===!!b.favorite
-  &&(a.completedAt??'')===(b.completedAt??'')&&stable(dataOf(a))===stable(dataOf(b))&&stable(attachmentsOf(a))===stable(attachmentsOf(b));
+  &&(a.completedAt??'')===(b.completedAt??'')&&stable(dataOf(a,aAt))===stable(dataOf(b,bAt))&&stable(attachmentsOf(a))===stable(attachmentsOf(b));
 }
 
 /** `fresh` = what the first launch would write now (initializePlanner([])), used as the reference for content. */
@@ -49,7 +62,7 @@ export function scanDemoRecords(state:PlannerState|undefined,fresh:PlannerState)
    o.updatedAt!==o.createdAt?'запись изменялась':
    o.archivedAt?'запись в архиве':
    ownHistory.has(o.id)?'есть отметки покупок или выполнения':
-   !(reference.get(signature(o))??[]).some(r=>sameContent(o,r))?'содержимое отличается от примера':
+   !(reference.get(signature(o))??[]).some(r=>sameContent(o,r,o.createdAt,r.createdAt))?'содержимое отличается от примера':
    undefined;
   if(reason)rejected.push({object:o,reason});else candidates.push(o);
  }
