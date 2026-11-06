@@ -1,13 +1,20 @@
 import {usePlannerColors} from './ui';
 import {IntegrationReview} from './IntegrationReview';
 import React,{useState,useRef,useEffect} from 'react';import {View,Pressable,Platform,TextInput,Linking} from 'react-native';import type {RecordObject,Section,FileRef} from '@life-os/domain/planner';import {localDate} from '@life-os/domain/planner';import {T,C,Input,Primary,AttachmentPicker,MealPhotoPicker,SegmentedTabs,ConfirmationSheet,Action,DatePicker} from './ui';import {usePlanner} from './context';import {object} from './seed';import {RichNoteEditor} from '../features/RichNoteEditor';
-export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;compact?:boolean;more?:boolean}){
+/**
+ * A note: title and free text, saved automatically.
+ * New note (no `item`): opens empty with the cursor in the title; the record is created only once something is typed,
+ * so leaving an untouched note saves nothing.
+ */
+export function NotesEditor({item:given,compact=false,more=false,newTab}:{item?:RecordObject;compact?:boolean;more?:boolean;newTab?:string}){
  const C=usePlannerColors();
- const {patch}=usePlanner();
- const [title,setTitle]=useState(item.title);
+ const {patch,create,state}=usePlanner();
+ const [id,setId]=useState(given?.id);
+ const item=(id?state?.objects.find(o=>o.id===id):undefined)??given;
+ const [title,setTitle]=useState(given?.title??'');
  const [status,setStatus]=useState(compact?'':'Сохранено');
- const [attachmentsOpen,setAttachmentsOpen]=useState(false);
- const draft=useRef({title:item.title,html:item.data.html??item.description,text:item.description});
+ const draft=useRef({title:given?.title??'',html:given?(given.data.html??given.description):'',text:given?.description??''});
+ const idRef=useRef(given?.id);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const queue=useRef(Promise.resolve());
  const dirty=useRef(false);
@@ -18,9 +25,12 @@ export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;c
   dirty.current=false;
   const value={...draft.current};
   setStatus('Сохраняется…');
-  queue.current=queue.current.catch(()=>{}).then(()=>patch(item.id,{
-   title:value.title.trim()||'Без названия',description:value.text,data:{html:value.html},
-  })).then(()=>setStatus('Сохранено')).catch(()=>{
+  if(!idRef.current&&!value.title.trim()&&!value.text.trim()){setStatus('');return;} // empty new note: nothing to save
+  queue.current=queue.current.catch(()=>{}).then(async()=>{
+   const fields={title:value.title.trim()||'Без названия',description:value.text,data:{html:value.html}};
+   if(!idRef.current){const created=await create('note','work',fields.title,{tab:newTab??'Работа',html:value.html});idRef.current=created.id;setId(created.id);}
+   await patch(idRef.current!,fields);
+  }).then(()=>setStatus(compact?'':'Сохранено')).catch(()=>{
    dirty.current=true;
    setStatus('Не удалось сохранить. Изменения остались в редакторе.');
   });
@@ -34,35 +44,30 @@ export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;c
   timer.current=setTimeout(save,700);
  };
  useEffect(()=>()=>{if(timer.current)save();},[]);
- const togglePin=()=>patch(item.id,{pinned:!item.pinned}).catch(()=>{});
- const toggleFavorite=()=>patch(item.id,{favorite:!item.favorite}).catch(()=>{});
- const titleInput=<TextInput accessibilityLabel="Заголовок заметки" value={title}
-  onChangeText={value=>{setTitle(value);changed(draft.current.html,draft.current.text);}} onBlur={save}
-  style={{fontFamily:'Inter',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0}}/>;
- const files=<AttachmentPicker documentsOnly={item.section==='work'} files={item.attachments} onChange={values=>patch(item.id,{attachments:values}).catch(()=>{})}/>;
- const links=<Input label="Ссылки" value={item.data.links??''} onChange={value=>patch(item.id,{data:{links:value}}).catch(()=>{})}/>;
- const updated=new Date(item.updatedAt);
+ const togglePin=()=>{if(item)patch(item.id,{pinned:!item.pinned}).catch(()=>{});};
+ const toggleFavorite=()=>{if(item)patch(item.id,{favorite:!item.favorite}).catch(()=>{});};
+ const titleInput=<TextInput accessibilityLabel="Заголовок заметки" value={title} autoFocus={!given}
+  onChangeText={value=>{setTitle(value);draft.current.title=value;changed(draft.current.html,draft.current.text);}} onBlur={save}
+  style={{fontFamily:'Inter',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0,...(Platform.OS==='web'?{outlineStyle:'none'} as object:{})}}/>;
+ const files=item?<AttachmentPicker documentsOnly={item.section==='work'} files={item.attachments} onChange={values=>patch(item.id,{attachments:values}).catch(()=>{})}/>:null;
+ const links=item?<Input label="Ссылки" value={item.data.links??''} onChange={value=>patch(item.id,{data:{links:value}}).catch(()=>{})}/>:null;
+ const updated=new Date(item?.updatedAt??'');
  const timestamp=Number.isNaN(updated.getTime())?'':updated.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' · '+updated.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
  return <View style={{backgroundColor:compact?C.paper:'#fffefa',padding:17,borderRadius:20,gap:14,minHeight:480,flexGrow:1}}>
   {compact?<View style={{flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:1,borderColor:C.line,paddingBottom:15}}>
    <View style={{flex:1,minWidth:0,gap:3}}>{titleInput}{timestamp&&<T muted size={11}>Изменено {timestamp}</T>}</View>
-   <View style={{flexDirection:'row',gap:4}}>
+   {item&&<View style={{flexDirection:'row',gap:4}}>
     <View style={{backgroundColor:C.lavender,borderRadius:10}}><Action icon="bookmark" label={item.pinned?'Открепить':'Закрепить'} filled={!!item.pinned} color={C.purple} onPress={togglePin}/></View>
     <View style={{backgroundColor:C.lavender,borderRadius:10}}><Action icon="heart" label={item.favorite?'Убрать из избранного':'В избранное'} filled={!!item.favorite} color={C.purple} onPress={toggleFavorite}/></View>
-   </View>
+   </View>}
   </View>:<>{titleInput}<View style={{flexDirection:'row',gap:8}}>
-   <Primary quiet onPress={togglePin}>{item.pinned?'Открепить':'Закрепить'}</Primary>
-   <Primary quiet onPress={toggleFavorite}>{item.favorite?'♥':'♡'}</Primary>
+   {item&&<Primary quiet onPress={togglePin}>{item.pinned?'Открепить':'Закрепить'}</Primary>}
+   {item&&<Primary quiet onPress={toggleFavorite}>{item.favorite?'♥':'♡'}</Primary>}
   </View></>}
-  <RichNoteEditor initial={item.data.html??item.description} onChange={changed} onBlur={save} compact={compact} more={more}
-   afterBody={compact?<View style={{gap:8}}>
-    <Pressable accessibilityRole="button" accessibilityState={{expanded:attachmentsOpen}} onPress={()=>setAttachmentsOpen(value=>!value)}
-     style={{alignSelf:'flex-start',borderRadius:10,backgroundColor:C.lavender,paddingHorizontal:12,paddingVertical:7}}>
-     <T size={12} bold color={C.purple}>＋ Добавить</T>
-    </Pressable>
-    {(attachmentsOpen||item.attachments.some(file=>!file.mime.startsWith('image/')))&&files}
-    {(attachmentsOpen||more)&&links}
-   </View>:undefined}/>
+  <RichNoteEditor initial={given?(given.data.html??given.description):''} onChange={changed} onBlur={save} compact={compact} more={more}
+   // Files and links live behind the header's «•••» (or show when the note already has documents): no extra button
+   // floating above the text, nothing between the text and the keyboard.
+   afterBody={compact&&item&&(more||item.attachments.some(file=>!file.mime.startsWith('image/')))?<View style={{gap:8}}>{files}{more&&links}</View>:undefined}/>
   {!compact&&<>{files}{links}</>}
   {!!status&&<T size={11} muted>{status}</T>}
  </View>;

@@ -21,6 +21,9 @@ export function SoftPlaceRow({item,section,onPress}:{item:RecordObject;section:'
  const d=item.data;
  const visited=section==='travel'&&item.status==='completed';
  const subtitle:string|undefined=section==='travel'?d.address:d.season;
+ const mapsUrl:string|undefined=section!=='travel'?undefined:typeof d.sourceUrl==='string'&&/^https:\/\/(www\.)?google\.[a-z.]+\/maps|^https:\/\/maps\.(google|app\.goo)/.test(d.sourceUrl)?d.sourceUrl
+  :Number.isFinite(Number(d.lat))&&Number.isFinite(Number(d.lng))&&d.lat!==undefined&&d.lng!==undefined?'https://www.google.com/maps/search/?api=1&query='+Number(d.lat)+','+Number(d.lng)
+  :'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([item.title,d.address].filter(Boolean).join(' '));
  const date=item.completedAt?new Date(item.completedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):undefined;
  return <SoftPressable accessibilityRole="button" accessibilityLabel={[item.title,subtitle,visited?'посещено':undefined].filter(Boolean).join(', ')} onPress={onPress}
   style={{flexDirection:'row',alignItems:'center',gap:12,padding:10,paddingRight:12,minHeight:section==='wardrobe'&&photo?84:68,borderRadius:16,
@@ -35,15 +38,18 @@ export function SoftPlaceRow({item,section,onPress}:{item:RecordObject;section:'
    <T size={15} bold lines={2} style={{lineHeight:20}}>{item.title}</T>
    {!!subtitle&&<T size={13} lines={2} color="#5f5862">{subtitle}</T>}
    {photo&&!!author&&<T size={11} lines={1} color="#8a8189">Фото: {author}</T>}
-   {(visited||section==='travel'&&d.sourceUrl)&&<View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',columnGap:12,rowGap:2,marginTop:3}}>
+   {visited&&<View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',columnGap:12,rowGap:2,marginTop:3}}>
     {visited&&<View style={{flexDirection:'row',alignItems:'center',gap:4}}>
      <Icon name="check" size={13} color={palette.positive} strokeWidth={2}/><T size={12.5} color="#2F6B5A">Посещено{date?' · '+date:''}</T>
     </View>}
-    {section==='travel'&&!!d.sourceUrl&&<Pressable accessibilityRole="link" accessibilityLabel={'Открыть в Google Maps: '+item.title} hitSlop={8}
-     onPress={()=>Linking.openURL(d.sourceUrl).catch(()=>{})} style={{minHeight:28,justifyContent:'center'}}>
-     <T size={12.5} color={palette.mauve}>Открыть в картах ↗</T>
-    </Pressable>}
    </View>}
   </View>
+  {/* One tap → this place in Google Maps (the app opens it when installed, otherwise the website). The row itself
+      still opens the details. Uses the saved link or saved coordinates; otherwise a search by the saved name/address. */}
+  {mapsUrl&&<Pressable accessibilityRole="link" accessibilityLabel={'Открыть в Google Картах: '+item.title} hitSlop={6}
+   onPress={e=>{e.stopPropagation?.();Linking.openURL(mapsUrl).catch(()=>{});}}
+   style={{width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(96,87,97,0.08)'}}>
+   <Icon name="map" size={19} color={palette.mauve}/>
+  </Pressable>}
  </SoftPressable>;
 }

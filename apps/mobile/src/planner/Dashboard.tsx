@@ -1,4 +1,5 @@
 import {CalendarContent} from './ShiftCalendar';
+import {HomeHabits} from './HomeHabits';
 import {useShiftPermission,previewShiftSound} from '../data/shift-notifications';
 import {minimalSurfaces,warmSurfaces,softHome} from '../design/themes';
 import {shadows,radii} from '../design/system';
@@ -148,35 +149,12 @@ export function Dashboard(){const C=usePlannerColors();
  const soft=app.settings.theme==='soft';
  const {navigate}=useSoftNavigation();
  const habitInk=warm?warmSurfaces.icon:soft?softHome.text:'#6d6a86';
- const addHabit=()=>router.push({pathname:'/planner' as any,params:{section:'home',type:'habit',add:'1'}});
  const scheduled=state?.objects.filter(o=>o.data.plannedDate===date&&!o.archivedAt&&o.type!=='habit')??[];
  return <Frame title="LIFE OS" header={false}>
   <Logo/>
   <HomeWeek selected={date} onChange={setDate} onDayPress={day=>setQuickEntry({date:day,sequence:++entrySequence.current})} calendar={calendar}/>
   <View style={warm?{backgroundColor:warmSurfaces.panel,borderRadius:22,borderWidth:1,borderColor:C.line,padding:12,gap:9}:app.settings.theme==='mist'?{backgroundColor:'#f7f7ff',borderRadius:24,padding:10,gap:10}:{gap:soft?12:14}}>
-  {habits.map(habit=>{const Card=soft?SoftPressable:Pressable;return <Card key={habit.id} accessibilityRole="button" accessibilityLabel="Привычка"
-   onPress={()=>(soft?navigate:router.push)({pathname:'/planner' as any,params:{section:'home',id:habit.id}})}
-   style={soft?{paddingHorizontal:14,paddingTop:8,paddingBottom:12,borderRadius:radii.card,backgroundColor:softHome.glass,borderWidth:1,borderColor:softHome.glassBorder,gap:5,...shadows[1]}
-    :{paddingHorizontal:12,paddingTop:6,paddingBottom:10,borderRadius:16,backgroundColor:app.settings.theme==='minimal'?minimalSurfaces.habit:C.paper,gap:4}}>
-   <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-    <Icon name="cat" size={16} color={habitInk}/>
-    <T bold={!warm} size={warm?14:12} color={habitInk} style={{flex:1}}>Привычка</T>
-    <Pressable accessibilityRole="button" accessibilityLabel="Добавить привычку" onPress={addHabit} hitSlop={8}
-     style={{width:28,height:28,alignItems:'center',justifyContent:'center'}}>
-     <Icon name="plus" size={17} color={habitInk}/>
-    </Pressable>
-   </View>
-   <View style={{flexDirection:'row',alignItems:'center',gap:9}}>
-    <HabitCheckbox checked={habitCount(habit,date)>=Number(habit.data.frequency??1)} outline={soft?softHome.muted:undefined}
-     onPress={()=>{patch(habit.id,markHabit(habit,date,new Date().toISOString())).catch(()=>{});}}/>
-    <T size={13} color={soft?softHome.text:undefined} style={{flex:1}} lines={1}>{habit.title}</T>
-    {HABIT_DAYS.map((day,i)=><View key={i} style={{alignItems:'center',gap:3}}>
-     <T size={9} muted={!soft} color={soft?softHome.muted:undefined}>{day}</T>
-     <View style={{width:12,height:12,borderRadius:6,backgroundColor:habitCount(habit,weekDayKey(date,i))>=Number(habit.data.frequency??1)?(soft?softHome.text:'#7cbd9d'):soft?'rgba(244,240,242,0.18)':habit.data.days?.includes((i+1)%7)?'#dedbe7':'#e9e7ee'}}/>
-    </View>)}
-   </View>
-  </Card>;})}
-  {!habits.length&&<Pressable onPress={addHabit} style={{padding:12,borderRadius:16,backgroundColor:soft?softHome.glass:C.lavender}}><T size={13} color={soft?softHome.text:undefined}>＋ Добавить привычку</T></Pressable>}
+  <HomeHabits habits={habits} date={date}/>
   {scheduled.map(o=><Pressable key={o.id} onPress={()=>router.push({pathname:'/planner' as any,params:{section:o.section,id:o.id}})} style={{padding:10,borderRadius:12,backgroundColor:C.paper}}><T size={12}>{o.title}</T><DateLabel date={o.data.plannedDate}/></Pressable>)}
   <DashboardTiles/>
   </View>
