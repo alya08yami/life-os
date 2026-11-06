@@ -1,3 +1,5 @@
+import {handoffKeyboard} from '../design/keyboard-handoff';
+import {instant} from '../design/instant';
 import {minimalSurfaces,warmSurfaces,softHome} from '../design/themes';
 import {useEffectiveTheme,useReducedMotion} from '../design/scope';
 import {SoftPressable} from '../design/SoftPressable';
@@ -30,7 +32,7 @@ type Recognition = {
 export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=usePlannerColors();
  const theme=useEffectiveTheme();
  const {navigate:softNavigate}=useSoftNavigation();
- const path=usePathname();const params=useLocalSearchParams<{section:string}>();const [add,setAdd]=useState(false);
+ const path=usePathname();const params=useLocalSearchParams<{section:string}>();const [add,setAdd]=useState(false);const [handover,setHandover]=useState(false);
  const [spoken,setSpoken]=useState('');
  const [listening,setListening]=useState(false);
  const [voiceError,setVoiceError]=useState('');
@@ -63,7 +65,11 @@ export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=useP
  const openEditor=(section?:string,type?:string,category?:string)=>{
   const title=spoken.trim();
   const voice=title?stageVoiceDraft(title):undefined;
-  close();
+  // Close the menu right now: its modal hands focus back to the «+» button as it goes, so that has to be over
+  // before the keyboard hand-off takes focus.
+  instant(()=>{setHandover(true);close();});
+  // The editor opens on the section screen: keep the keyboard for its title across the screen change.
+  handoffKeyboard();
   router.push({pathname:'/planner',params:{section,type,category,add:'1',voice}});
  };
  const section=params.section??(path.includes('wishlist')?'shopping':path.startsWith('/section/')?path.split('/')[2]:path.includes('health')?'health':undefined);
@@ -77,7 +83,7 @@ export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=useP
  // Dark theme: the old grey (#797985) almost vanished on the dark bar; a lighter lavender grey keeps ~4.8:1 contrast.
  const inactive=theme==='dark'?'#A9A3C2':'#797985';
  if(keyboardOpen)return null;
- return <>{theme==='soft'?<SoftNavBar links={links} path={path} open={add} onNavigate={target=>path==='/'?softNavigate(target as any):router.push(target as any)} onAdd={()=>setAdd(true)}/>:<View style={{backgroundColor:theme==='minimal'?minimalSurfaces.navigation:C.paper,borderTopWidth:1,borderColor:warm?C.line:theme==='minimal'?'#c9ced8':'#eeece9',flexDirection:'row',paddingHorizontal:10,paddingTop:8,paddingBottom:10,minHeight:70,...(warm?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:32,borderWidth:1}:notes?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:20,borderTopWidth:0}:{paddingBottom:10+safeBottom})}}>{links.map(x=><Pressable key={x.path} accessibilityRole="tab" accessibilityLabel={x.title||'Добавить'} aria-selected={path===x.path} accessibilityState={{selected:path===x.path}} onPress={()=>x.icon==='plus'?setAdd(true):path!==x.path&&router.push(x.path as any)} style={{flex:1,alignItems:'center',justifyContent:'center',gap:4}}>{x.icon==='plus'?<View style={{width:49,height:49,borderRadius:25,backgroundColor:warm?warmSurfaces.selection:theme==='mist'?'#6d72cf':theme==='minimal'?'#fff':'#786c63',alignItems:'center',justifyContent:'center'}}><Icon name="plus" color={warm||theme==='minimal'?C.ink:'#fff'} size={26}/></View>:<><Icon name={x.icon} filled={!warm&&x.icon==='house'&&path==='/'} color={warm?warmSurfaces.icon:path===x.path?C.ink:inactive} size={warm?24:22}/>{!warm&&<T size={9} color={path===x.path?C.ink:inactive}>{x.title}</T>}</>}</Pressable>)}</View>}<ConfirmationSheet visible={add} title="Добавить" onClose={close} headerTitle={<View style={{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',paddingLeft:36}}><T bold size={20}>Добавить</T><Action icon="mic" label={listening?'Остановить диктовку':'Диктовать голосом'} color={listening?C.red:C.ink} onPress={dictate}/></View>}>
+ return <>{theme==='soft'?<SoftNavBar links={links} path={path} open={add} onNavigate={target=>path==='/'?softNavigate(target as any):router.push(target as any)} onAdd={()=>(setHandover(false),setAdd(true))}/>:<View style={{backgroundColor:theme==='minimal'?minimalSurfaces.navigation:C.paper,borderTopWidth:1,borderColor:warm?C.line:theme==='minimal'?'#c9ced8':'#eeece9',flexDirection:'row',paddingHorizontal:10,paddingTop:8,paddingBottom:10,minHeight:70,...(warm?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:32,borderWidth:1}:notes?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:20,borderTopWidth:0}:{paddingBottom:10+safeBottom})}}>{links.map(x=><Pressable key={x.path} accessibilityRole="tab" accessibilityLabel={x.title||'Добавить'} aria-selected={path===x.path} accessibilityState={{selected:path===x.path}} onPress={()=>x.icon==='plus'?(setHandover(false),setAdd(true)):path!==x.path&&router.push(x.path as any)} style={{flex:1,alignItems:'center',justifyContent:'center',gap:4}}>{x.icon==='plus'?<View style={{width:49,height:49,borderRadius:25,backgroundColor:warm?warmSurfaces.selection:theme==='mist'?'#6d72cf':theme==='minimal'?'#fff':'#786c63',alignItems:'center',justifyContent:'center'}}><Icon name="plus" color={warm||theme==='minimal'?C.ink:'#fff'} size={26}/></View>:<><Icon name={x.icon} filled={!warm&&x.icon==='house'&&path==='/'} color={warm?warmSurfaces.icon:path===x.path?C.ink:inactive} size={warm?24:22}/>{!warm&&<T size={9} color={path===x.path?C.ink:inactive}>{x.title}</T>}</>}</Pressable>)}</View>}<ConfirmationSheet visible={add} skipExit={handover} title="Добавить" onClose={close} headerTitle={<View style={{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',paddingLeft:36}}><T bold size={20}>Добавить</T><Action icon="mic" label={listening?'Остановить диктовку':'Диктовать голосом'} color={listening?C.red:C.ink} onPress={dictate}/></View>}>
  {listening&&<T center size={12}>Слушаю…</T>}
  {!!voiceError&&<T center size={12} color={C.red}>{voiceError}</T>}
  {(!!spoken||!!voiceError)&&<TextInput accessibilityLabel="Текст записи" value={spoken} onChangeText={setSpoken} placeholder="Название записи" maxLength={200} style={{minHeight:44,padding:10,borderRadius:12,backgroundColor:C.paper,color:C.ink,textAlign:'center'}}/>}

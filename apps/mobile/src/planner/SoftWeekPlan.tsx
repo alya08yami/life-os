@@ -1,3 +1,4 @@
+import {instant} from '../design/instant';
 import React,{useEffect,useRef,useState} from 'react';
 import {useHorizontalSwipe} from '../design/swipe';
 import {Image,Platform,Pressable,ScrollView,View} from 'react-native';
@@ -64,7 +65,7 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
      </Pressable>
      {MEALS.map(meal=>{const o=dish(key,meal);return <View key={meal} style={{marginTop:5}}>
       <T size={9.5} color="#8a8189" bold style={{letterSpacing:0.5,textTransform:'uppercase',marginHorizontal:2,marginBottom:2,lineHeight:12}}>{meal}</T>
-      <MealCell o={o} width={column-14} meal={meal} day={key} onPress={()=>o?open(o):assign({date:key,meal})} onLongPress={()=>assign({date:key,meal})}/>
+      <MealCell o={o} width={column-14} meal={meal} day={key} onPress={()=>o?open(o):instant(()=>assign({date:key,meal}))} onLongPress={()=>assign({date:key,meal})}/>
      </View>;})}
     </View>;})}
    </ScrollView>}
@@ -77,7 +78,7 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
    <T size={15} bold>{new Date(date+'T12:00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase())}</T>
    <View style={{backgroundColor:'rgba(251,249,250,0.94)',borderRadius:18,borderWidth:1,borderColor:'rgba(41,38,45,0.06)',overflow:'hidden',...shadows[1]}}>
     {MEALS.map((meal,i)=>{const o=dish(date,meal);const source=o&&pictureSource(o);return <SoftPressable key={meal} accessibilityRole="button"
-     accessibilityLabel={meal+(o?' · '+o.title:' · Добавить')} onPress={()=>o?open(o):assign({date,meal})} onLongPress={()=>assign({date,meal})}
+     accessibilityLabel={meal+(o?' · '+o.title:' · Добавить')} onPress={()=>o?open(o):instant(()=>assign({date,meal}))} onLongPress={()=>assign({date,meal})}
      style={{flexDirection:'row',alignItems:'center',gap:12,paddingVertical:9,paddingHorizontal:12,minHeight:58,borderTopWidth:i?1:0,borderColor:'rgba(41,38,45,0.08)'}}>
      {o&&source?<Image source={source} resizeMode="cover" style={{width:44,height:44,borderRadius:11,backgroundColor:'#eee8eb'}}/>
       :<View style={{width:44,height:44,borderRadius:11,borderWidth:1,borderStyle:'dashed',borderColor:'rgba(41,38,45,0.18)',alignItems:'center',justifyContent:'center'}}><Icon name={o?'soup':'plus'} size={16} color="#a99ea6"/></View>}
