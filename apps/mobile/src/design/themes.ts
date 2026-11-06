@@ -1,11 +1,11 @@
+/** Themes offered in Settings. Older themes stay readable in stored data but are no longer offered. */
 export const themeOptions=[
- {id:'light',label:'Светлая'},
- {id:'dark',label:'Тёмная'},
- {id:'minimal',label:'Минимал-типографика · Inter'},
- {id:'mist',label:'Сиреневый туман'},
- {id:'warm',label:'Тёплый минимализм'},
  {id:'soft',label:'Soft Future'},
+ {id:'warm',label:'Тёплый минимализм'},
+ {id:'minimal',label:'Минимал · Типографика Inter'},
 ] as const;
+/** A retired theme still selected from an earlier version moves to the closest remaining one (records untouched). */
+export const retiredThemes:Record<string,'soft'|'warm'|'minimal'>={light:'warm',dark:'soft',mist:'soft'};
 
 export const warmSurfaces={tile:'#f2eee9',icon:'#796653',panel:'#fcfaf7',selection:'#a393b5'};
 

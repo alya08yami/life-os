@@ -18,6 +18,8 @@ import {gradients} from '../src/design/system';
 import {SoftTransitionProvider} from '../src/design/transition';
 import {NavDrawerProvider} from '../src/components/NavDrawer';
 import {useKeyboardFrame} from '../src/design/keyboard';
+import {retiredThemes} from '../src/design/themes';
+import {applyFont,isFontId,FONT_PREFERENCE} from '../src/design/fonts';
 /** Background for the first frames: the theme remembered from the last launch (graphite only for the Soft Future home). */
 function bootColor(){
  if(Platform.OS!=='web'||typeof window==='undefined')return '#f4f0f2';
@@ -37,6 +39,12 @@ function Routes(){const {state,ready}=useApp();const path=usePathname();
  useEffect(()=>{if(Platform.OS!=='web'||typeof document==='undefined'||!ready)return;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',bar);document.documentElement.style.backgroundColor=bar;document.body.style.backgroundColor=bar;
   // Remember the theme for the next launch, so the very first frame (before data loads) already has the right colours.
   try{localStorage.setItem('life-os.theme',state.settings.theme);}catch{/* private mode */}},[bar,ready,state.settings.theme]);
+ // A theme retired in this version moves to the closest remaining one, once (only the setting changes).
+ const {repo,run}=useApp();
+ useEffect(()=>{if(!ready)return;const next=retiredThemes[state.settings.theme];if(next)run(()=>repo.configure({theme:next})).catch(()=>{});},[ready,state.settings.theme]);
+ // App font (independent of the theme): stored with the data, applied to the whole interface.
+ const font=state.uiPreferences?.[FONT_PREFERENCE];
+ useEffect(()=>{if(ready)applyFont(isFontId(font)?font:'inter');},[ready,font]);
  const keyboardFrame=useKeyboardFrame();
  // Until stored settings are loaded, show only the remembered background: no default theme flashing first.
  if(!ready)return <View style={{flex:1,backgroundColor:bootColor()}}/>;
