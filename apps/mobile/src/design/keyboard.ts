@@ -51,6 +51,8 @@ function attach(){
 const subscribe=(l:()=>void)=>{attach();listeners.add(l);return ()=>{listeners.delete(l);};};
 const snapshot=()=>current;
 
+/** Current state without subscribing (for gesture handlers). */
+export function getVisualViewport():VisualViewportState{attach();return current;}
 /** Visible area above the on-screen keyboard (web). `keyboard` is false when no keyboard is shown. */
 export function useVisualViewport():VisualViewportState{
  return useSyncExternalStore(subscribe,snapshot,()=>CLOSED);

@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {useHorizontalSwipe} from '../design/swipe';
 import {Image,Platform,Pressable,ScrollView,View} from 'react-native';
 import type {RecordObject} from '@life-os/domain/planner';
 import {Icon} from '../components/Icon';
@@ -37,8 +38,10 @@ export function SoftWeekPlan({date,setDate,dishes,open,assign}:{date:string;setD
  // On opening and on a new week, the chosen day is shown at once, with the previous day next to it.
  useEffect(()=>{if(!column)return;const x=Math.max(0,(selected-1)*(column+GAP));scroll.current?.scrollTo({x,animated:false});setOffset(x);},[column,monday]);
  const today=new Date();const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+ const weekSwipe=useHorizontalSwipe({onNext:()=>setDate(shiftDay(date,7)),onPrev:()=>setDate(shiftDay(date,-7))});
  return <View style={{gap:8}} accessibilityLabel="План питания">
-  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+  {/* Week switching by swipe lives on this header row: the day cards below already scroll horizontally on their own. */}
+  <View {...weekSwipe.panHandlers} style={[{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},weekSwipe.style]}>
    <Action icon="back" label="Предыдущая неделя · План питания" onPress={()=>setDate(shiftDay(date,-7))}/>
    <T size={13.5} color={palette.inkMuted}>{range(monday)}</T>
    <Action icon="next" label="Следующая неделя · План питания" onPress={()=>setDate(shiftDay(date,7))}/>

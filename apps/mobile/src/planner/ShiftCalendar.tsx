@@ -141,7 +141,7 @@ export function CalendarContent({data,save,reminderWarning,permission,preview,in
  const mist=theme==='mist';
  const calendar=<Frame centerTitle headerColor={mist?'#fff':undefined} title={detail?dateLabel(selected):'Мой календарь'} onBack={goBack}
   right={<Action icon="more" color={mist?'#fff':undefined} label="Настройки календаря" onPress={()=>show({kind:'settings'})}/>}>
-  {!detail&&<SegmentedTabs mistHeader={mist} transparentTrack={theme==='minimal'} values={[...tabs]} value={tab} onChange={value=>setTab(value as Tab)}/>}
+  {!detail&&<SegmentedTabs swipe mistHeader={mist} transparentTrack={theme==='minimal'} values={[...tabs]} value={tab} onChange={value=>setTab(value as Tab)}/>}
   {detail?<>{summary}{events}{options}</>:tab==='Месячные'?
    <PeriodHistory data={data} onEdit={range=>show({kind:'cycle',rangeId:range.id,start:range.startDate})}
     onAdd={()=>show({kind:'cycle',start:today})}/>:<>

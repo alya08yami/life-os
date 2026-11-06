@@ -96,6 +96,7 @@ export function MonthGrid({data,month,today,selected,onSelect,onMonth,mode='grid
  const dates=monthCells(month);
  const swipe=React.useMemo(()=>PanResponder.create({
   onMoveShouldSetPanResponderCapture:(_,g)=>Math.abs(g.dx)>12&&Math.abs(g.dx)>1.5*Math.abs(g.dy),
+  onPanResponderTerminationRequest:()=>false, // the month swipe stays with the calendar, not the screen's tabs
   onPanResponderRelease:(_,g)=>{
    if(Math.abs(g.dx)>48&&Math.abs(g.dx)>Math.abs(g.dy))onMonth(g.dx<0?1:-1);
   },

@@ -106,7 +106,7 @@ export function Conditions({selected,onSelect}:{selected?:string;onSelect:(id:st
    <Pressable style={{flex:1}} onLongPress={()=>start({title,body:subtitle})}><T bold size={19}>{title}</T>{!!subtitle&&<T muted size={12}>{subtitle}</T>}</Pressable>
    <Action icon="heart" label={saved?.data.favorite?'Убрать из избранного':'В избранное'} filled={!!saved?.data.favorite} onPress={()=>void persist({favorite:!saved?.data.favorite}).catch(()=>setError('Не удалось обновить избранное.'))}/>
   </View>
-  <SegmentedTabs values={[...tabs]} value={tab} onChange={value=>setTab(value as Group)}/>
+  <SegmentedTabs swipe values={[...tabs]} value={tab} onChange={value=>setTab(value as Group)}/>
   {tab==='Препараты'?<>{card('Препараты','pill')}{card('Полезности','bulb')}</>:tab==='Полезности'?card('Полезности','bulb'):card('Заметки','edit')}
   <T muted size={11}>Удерживайте запись, чтобы изменить её.</T>
   </>:<>
