@@ -1,4 +1,5 @@
 import {CalendarContent} from './ShiftCalendar';
+import {useNavDrawer} from '../components/NavDrawer';
 import {HomeHabits} from './HomeHabits';
 import {useShiftPermission,previewShiftSound} from '../data/shift-notifications';
 import {minimalSurfaces,warmSurfaces,softHome} from '../design/themes';
@@ -109,29 +110,29 @@ function dashboardHabits(state:ReturnType<typeof usePlanner>['state']){
  return habits.filter(o=>!exercises.includes(o)||o===primary||!isUntouchedSeed(o));
 }
 
+/**
+ * Home header (Navicon reference): ☰ on the left opens the side menu, «LIFE OS» in the middle, search on the right.
+ * Settings live in the menu and in the profile.
+ */
 function Logo(){
- const {theme}=useApp().state.settings;
- if(theme==='minimal')return <View style={{height:50,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-  <T bold size={20}>LIFE OS</T>
-  <View style={{backgroundColor:'#fff',borderRadius:24}}><Action icon="settings" label="Настройки" onPress={()=>router.push('/settings')}/></View>
- </View>;
- const {navigate}=useSoftNavigation();
- if(theme==='soft')return <View style={{flexDirection:'row',alignItems:'center',height:56}}>
-  <View style={{width:36}}/>
-  <View style={{flex:1,alignItems:'center'}}>
-   <T center size={15} color={softHome.text} style={{fontFamily:'Inter',fontWeight:'300',letterSpacing:7,paddingLeft:7}}>LIFE OS</T>
-  </View>
-  <Action icon="settings" label="Настройки" color={softHome.text} onPress={()=>navigate('/settings')}/>
- </View>;
- const warm=theme==='warm';
- const color=theme==='mist'?'#fff':warm?'#242120':'#7d716a';
- return <View style={{flexDirection:'row',alignItems:'center',height:warm?68:50}}>
-  <View style={{width:36}}/>
+ const {theme}=useApp().state.settings;const C=usePlannerColors();
+ const {open}=useNavDrawer();
+ const soft=theme==='soft',warm=theme==='warm',minimal=theme==='minimal',mist=theme==='mist';
+ const color=soft?softHome.text:mist?'#fff':warm?'#242120':minimal?'#101014':'#7d716a';
+ const square=soft?{backgroundColor:softHome.glass,borderColor:softHome.glassBorder}:warm?{backgroundColor:warmSurfaces.panel,borderColor:C.line}:{backgroundColor:minimal?'#fff':C.paper,borderColor:C.line};
+ return <View style={{flexDirection:'row',alignItems:'center',height:soft?60:warm?68:56}}>
+  <Pressable accessibilityRole="button" accessibilityLabel="Меню" onPress={open} hitSlop={4}
+   style={({pressed})=>({width:44,height:44,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',...square,opacity:pressed?0.75:1})}>
+   <Icon name="menu" size={21} color={warm?warmSurfaces.icon:color}/>
+  </Pressable>
   <View style={{flex:1,alignItems:'center'}}>
    {/* paddingLeft compensates the trailing letter spacing so the word stays optically centred */}
-   <T center size={warm?24:20} color={color} style={{fontFamily:'Inter',letterSpacing:warm?6:5,paddingLeft:warm?6:5,lineHeight:warm?32:24,fontWeight:warm?'300':'400'}}>LIFE OS</T>
+   <T center size={soft?15:warm?22:minimal?19:18} color={color} style={{fontFamily:'Inter',fontWeight:soft||warm?'300':minimal?'600':'400',letterSpacing:soft?7:warm?6:minimal?2:5,paddingLeft:soft?7:warm?6:minimal?2:5}}>LIFE OS</T>
   </View>
-  <Action icon="settings" label="Настройки" color={warm?warmSurfaces.icon:color} onPress={()=>router.push('/settings')}/>
+  <Pressable accessibilityRole="button" accessibilityLabel="Поиск" onPress={()=>router.push('/search')} hitSlop={4}
+   style={({pressed})=>({width:44,height:44,borderRadius:14,alignItems:'center',justifyContent:'center',opacity:pressed?0.7:1})}>
+   <Icon name="search" size={21} color={warm?warmSurfaces.icon:color}/>
+  </Pressable>
  </View>;
 }
 

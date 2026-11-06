@@ -16,6 +16,7 @@ import {View,Platform} from 'react-native';
 import {colors} from '../src/design/tokens';
 import {gradients} from '../src/design/system';
 import {SoftTransitionProvider} from '../src/design/transition';
+import {NavDrawerProvider} from '../src/components/NavDrawer';
 import {useKeyboardFrame} from '../src/design/keyboard';
 /** Background for the first frames: the theme remembered from the last launch (graphite only for the Soft Future home). */
 function bootColor(){
@@ -39,6 +40,6 @@ function Routes(){const {state,ready}=useApp();const path=usePathname();
  const keyboardFrame=useKeyboardFrame();
  // Until stored settings are loaded, show only the remembered background: no default theme flashing first.
  if(!ready)return <View style={{flex:1,backgroundColor:bootColor()}}/>;
- return <SafeAreaView style={[{flex:1,backgroundColor:bar},keyboardFrame]} edges={['top','left','right']}><WebInteractionStyles/><StatusBar style={state.settings.theme==='dark'||softHome?'light':'dark'}/><SoftTransitionProvider><SwipeBack><Stack screenOptions={{headerShown:false,animation:'slide_from_right'}}/></SwipeBack></SoftTransitionProvider>{ready&&<ShiftNotificationSync data={state.planner?.shiftCalendar}/>}</SafeAreaView>;}
+ return <SafeAreaView style={[{flex:1,backgroundColor:bar},keyboardFrame]} edges={['top','left','right']}><WebInteractionStyles/><StatusBar style={state.settings.theme==='dark'||softHome?'light':'dark'}/><SoftTransitionProvider><NavDrawerProvider><SwipeBack><Stack screenOptions={{headerShown:false,animation:'slide_from_right'}}/></SwipeBack></NavDrawerProvider></SoftTransitionProvider>{ready&&<ShiftNotificationSync data={state.planner?.shiftCalendar}/>}</SafeAreaView>;}
 function LocalProfile(){const {session}=useApi();const path=usePathname();const profileId=session?'life-os-user-'+session.user.id:'life-os-v1';const previous=useRef(profileId);useEffect(()=>{if(previous.current!==profileId){previous.current=profileId;router.replace(path as '/');}},[profileId]);return <AppProvider key={profileId} profileId={profileId}><PlannerProvider><NotificationSync/><CatalogProvider><Routes/></CatalogProvider></PlannerProvider></AppProvider>;}
 export default function Root(){const [loaded,error]=useFonts({Inter:require('../assets/fonts/Inter.ttf')});if(!loaded&&!error)return <View style={{flex:1,backgroundColor:bootColor()}}/>;return <SafeAreaProvider><ApiProvider><LocalProfile/></ApiProvider></SafeAreaProvider>;}

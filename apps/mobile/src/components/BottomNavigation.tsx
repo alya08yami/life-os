@@ -16,7 +16,7 @@ import {router,usePathname,useLocalSearchParams} from 'expo-router';
 import {Icon} from './Icon';
 import {C,T,ConfirmationSheet,Primary,Action} from '../planner/ui';
 import {sections} from '../planner/seed';
-export const navigationItems=[{path:'/',key:'homeTab',icon:'house',title:'Главная'},{path:'/search',key:'search',icon:'search',title:'Поиск'},{path:'/add',key:'addObject',icon:'plus',title:''},{path:'/notifications',key:'notifications',icon:'bell',title:'Уведомления'},{path:'/profile',key:'profile',icon:'user',title:'Профиль'}] as const;
+export const navigationItems=[{path:'/',key:'homeTab',icon:'house',title:'Главная'},{path:'/shift-calendar',key:'search',icon:'calendar',title:'Календарь'},{path:'/add',key:'addObject',icon:'plus',title:''},{path:'/notifications',key:'notifications',icon:'bell',title:'Уведомления'},{path:'/profile',key:'profile',icon:'user',title:'Профиль'}] as const;
 type Recognition = {
  lang: string;
  onresult: ((event: {results: ArrayLike<ArrayLike<{transcript: string}>>})=>void) | null;
@@ -81,13 +81,30 @@ export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=useP
  {listening&&<T center size={12}>Слушаю…</T>}
  {!!voiceError&&<T center size={12} color={C.red}>{voiceError}</T>}
  {(!!spoken||!!voiceError)&&<TextInput accessibilityLabel="Текст записи" value={spoken} onChangeText={setSpoken} placeholder="Название записи" maxLength={200} style={{minHeight:44,padding:10,borderRadius:12,backgroundColor:C.paper,color:C.ink,textAlign:'center'}}/>}
- {choices?choices.map((choice,index)=>{const row=<AddMenuRow key={choice.title} title={choice.title} onPress={()=>openEditor(section,choice.type,choice.category)}/>;return theme==='soft'?<StaggerIn key={choice.title} index={index}>{row}</StaggerIn>:row;}):sections.filter(s=>!section||s.id===section).map((s,index)=>{const row=<AddMenuRow key={s.id} title={s.title.replace('\n',' ')} onPress={()=>openEditor(s.id)}/>;return theme==='soft'?<StaggerIn key={s.id} index={index}>{row}</StaggerIn>:row;})}{section&&<Primary quiet onPress={()=>{const voice=spoken.trim()?stageVoiceDraft(spoken.trim()):undefined;close();router.push({pathname:'/add',params:{voice}});}}>Другой раздел</Primary>}</ConfirmationSheet></>;
+ {section
+  ?<View style={{gap:6}}>
+    {(choices??sections.filter(s=>s.id===section).map(s=>({title:s.title.replace('\n',' '),type:undefined as string|undefined,category:undefined as string|undefined}))).map(choice=><AddMenuRow key={choice.title} title={choice.title} icon={sections.find(s=>s.id===section)?.icon} onPress={()=>openEditor(section,choice.type,choice.category)}/>)}
+    <Pressable accessibilityRole="button" onPress={()=>{const voice=spoken.trim()?stageVoiceDraft(spoken.trim()):undefined;close();router.push({pathname:'/add',params:{voice}});}} style={{minHeight:44,alignItems:'center',justifyContent:'center'}}><T size={13.5} color={C.muted}>Другой раздел</T></Pressable>
+   </View>
+  :<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+    {sections.map(s=><AddMenuTile key={s.id} title={s.title} icon={s.icon} onPress={()=>openEditor(s.id)}/>)}
+   </View>}</ConfirmationSheet></>;
 }
 
-export function AddMenuRow({title,onPress}:{title:string;onPress:()=>void}){const C=usePlannerColors();
- return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{minHeight:46,borderRadius:24,backgroundColor:'#eeecea',flexDirection:'row',alignItems:'center',justifyContent:'center',paddingHorizontal:16,gap:10}}>
-  <Icon name="plus" size={18} color={C.ink}/>
-  <T size={14} center style={{flexShrink:1}}>{title}</T>
+/** Quick add inside a section: a compact row with a thin icon. */
+export function AddMenuRow({title,onPress,icon}:{title:string;onPress:()=>void;icon?:string}){const C=usePlannerColors();
+ return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({pressed})=>({minHeight:52,borderRadius:16,backgroundColor:pressed?C.lavender:C.paper,borderWidth:1,borderColor:C.line,flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:12})}>
+  <View style={{width:32,height:32,borderRadius:16,backgroundColor:C.lavender,alignItems:'center',justifyContent:'center'}}><Icon name={(icon??'plus') as any} size={17} color={C.ink}/></View>
+  <T size={14.5} style={{flex:1}}>{title}</T>
+  <Icon name="plus" size={16} color={C.muted}/>
+ </Pressable>;
+}
+/** Quick add from anywhere: an even grid of the 12 sections, each a small tile with its thin icon and short name. */
+function AddMenuTile({title,icon,onPress}:{title:string;icon:string;onPress:()=>void}){const C=usePlannerColors();
+ return <Pressable accessibilityRole="button" accessibilityLabel={'Добавить: '+title.replace('\n',' ')} onPress={onPress}
+  style={({pressed})=>({width:'31.6%',minHeight:84,borderRadius:16,backgroundColor:pressed?C.lavender:C.paper,borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center',gap:7,paddingHorizontal:4,paddingVertical:10})}>
+  <Icon name={icon as any} size={21} color={C.ink}/>
+  <T size={12} center lines={2} style={{lineHeight:15}}>{title}</T>
  </Pressable>;
 }
 

@@ -2,7 +2,7 @@ export const shiftTypes=['FIRST_SHIFT','SECOND_SHIFT','RECOVERY_DAY','DAY_OFF'] 
 export type ShiftType=typeof shiftTypes[number];
 export const shiftLabels=['Первая смена','Вторая смена','Отсыпной','Выходной'];
 /** Shift accents: warm amber for the first (day) shift, calm blue for the second (night) one. */
-export const shiftColors=['#e9a92a','#4f74d1','#111a32','#111a32'];
+export const shiftColors=['#D9AE76','#7986A8','#111a32','#111a32'];
 export const sounds=['default','soft','short','bright','silent'] as const;
 export type SoundId=typeof sounds[number];
 type Audit={id:string;ownerId:string;createdAt:string;updatedAt:string};
