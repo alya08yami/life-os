@@ -4,6 +4,7 @@ import {Animated,Easing,Modal,PanResponder,Pressable,View,type StyleProp,type Vi
 import {useApp} from '../context';
 import {useDesignScope,useReducedMotion} from './scope';
 import {easing,gestures,motion,spring} from './system';
+import {useBackOverlay} from '../planner/navigation';
 
 /**
  * Soft Motion is active only in the Soft Future theme and never inside a frozen zone («Покупки и желания»),
@@ -27,8 +28,10 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
  align?:'bottom'|'center';legacyAnimation?:'slide'|'fade';
 }){
  const {enabled,reduced}=useSoftMotion();
+ // «Назад» (swipe / system / header) closes the open sheet first, instead of rolling back the screen under it.
+ useBackOverlay(visible,onRequestClose);
  // While the iPhone keyboard is open the sheet sits over the visible area above it (see design/keyboard).
- const frame=useKeyboardFrame();
+ const frame=useKeyboardFrame(true);
  const [mounted,setMounted]=useState(visible);
  const progress=useRef(new Animated.Value(0)).current;
  // Drag down to close — only from the top strip of a bottom sheet, so scrolling inside the sheet never conflicts.
