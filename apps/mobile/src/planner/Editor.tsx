@@ -14,7 +14,7 @@ export function NotesEditor({item:given,compact=false,more=false,newTab}:{item?:
  const item=(id?state?.objects.find(o=>o.id===id):undefined)??given;
  const [title,setTitle]=useState(given?.title??'');
  const [status,setStatus]=useState(compact?'':'Сохранено');
- const draft=useRef({title:given?.title??'',html:given?(given.data.html??given.description):'',text:given?.description??''});
+ const bodyFocus=useRef<(()=>void)|null>(null);const draft=useRef({title:given?.title??'',html:given?(given.data.html??given.description):'',text:given?.description??''});
  const idRef=useRef(given?.id);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const queue=useRef(Promise.resolve());
@@ -48,6 +48,8 @@ export function NotesEditor({item:given,compact=false,more=false,newTab}:{item?:
  const togglePin=()=>{if(item)patch(item.id,{pinned:!item.pinned}).catch(()=>{});};
  const toggleFavorite=()=>{if(item)patch(item.id,{favorite:!item.favorite}).catch(()=>{});};
  const titleInput=<TextInput accessibilityLabel="Заголовок заметки" value={title} autoFocus={!given}
+  // Return in the one-line title moves straight into the text; the keyboard stays open (focus moves synchronously).
+  returnKeyType="next" blurOnSubmit={false} submitBehavior="submit" onSubmitEditing={()=>bodyFocus.current?.()}
   onChangeText={value=>{setTitle(value);draft.current.title=value;changed(draft.current.html,draft.current.text);}} onBlur={save}
   style={{fontFamily:'Inter',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0,...(Platform.OS==='web'?{outlineStyle:'none'} as object:{})}}/>;
  const files=item?<AttachmentPicker documentsOnly={item.section==='work'} files={item.attachments} onChange={values=>patch(item.id,{attachments:values}).catch(()=>{})}/>:null;
@@ -65,7 +67,7 @@ export function NotesEditor({item:given,compact=false,more=false,newTab}:{item?:
    {item&&<Primary quiet onPress={togglePin}>{item.pinned?'Открепить':'Закрепить'}</Primary>}
    {item&&<Primary quiet onPress={toggleFavorite}>{item.favorite?'♥':'♡'}</Primary>}
   </View></>}
-  <RichNoteEditor initial={given?(given.data.html??given.description):''} onChange={changed} onBlur={save} compact={compact} more={more}
+  <RichNoteEditor focusRef={bodyFocus} initial={given?(given.data.html??given.description):''} onChange={changed} onBlur={save} compact={compact} more={more}
    // Files and links live behind the header's «•••» (or show when the note already has documents): no extra button
    // floating above the text, nothing between the text and the keyboard.
    afterBody={compact&&item&&(more||item.attachments.some(file=>!file.mime.startsWith('image/')))?<View style={{gap:8}}>{files}{more&&links}</View>:undefined}/>
