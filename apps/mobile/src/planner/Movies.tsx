@@ -40,7 +40,7 @@ function PosterTile({item,width,watched,onPress}:{item:RecordObject;width:number
  const year=item.data.year;
  return <SoftPressable accessibilityRole="button" onPress={onPress}
   accessibilityLabel={[item.title,year,watched?'просмотрено':undefined].filter(Boolean).join(', ')}
-  style={{width,height,borderRadius:10,overflow:'hidden',backgroundColor:'#e6dde2',...shadows[1]}}>
+  style={{width,height,borderRadius:10,overflow:'hidden',backgroundColor:'#e6dde2'}}>
   {source&&!failed
    ?<Image source={sized(source,width)} resizeMode="cover" onError={()=>setFailed(true)} style={{width,height}}/>
    :<TitleTile title={item.title} year={year}/>}

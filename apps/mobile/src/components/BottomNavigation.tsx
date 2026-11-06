@@ -11,6 +11,7 @@ import {stageVoiceDraft} from '../planner/voiceDraft';
 import React,{useEffect,useRef,useState} from 'react';
 import {View,Pressable,Platform,TextInput} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useVisualViewport} from '../design/keyboard';
 import {router,usePathname,useLocalSearchParams} from 'expo-router';
 import {Icon} from './Icon';
 import {C,T,ConfirmationSheet,Primary,Action} from '../planner/ui';
@@ -71,8 +72,11 @@ export function BottomNavigation({notes=false}:{notes?:boolean}={}){const C=useP
  // Soft Future keeps one LIFE OS bar everywhere; «Дела» is reached from a button inside «Работа» instead.
  const links=notes&&!warm&&theme!=='soft'?[navigationItems[0],{path:'/tasks',icon:'tasks',title:'Дела'} as const,navigationItems[2],navigationItems[1],navigationItems[4]]:navigationItems;
  const safeBottom=useSafeAreaInsets().bottom;
+ // The bar steps aside while the on-screen keyboard is open, as in native iPhone apps.
+ const keyboardOpen=useVisualViewport().keyboard;
  // Dark theme: the old grey (#797985) almost vanished on the dark bar; a lighter lavender grey keeps ~4.8:1 contrast.
  const inactive=theme==='dark'?'#A9A3C2':'#797985';
+ if(keyboardOpen)return null;
  return <>{theme==='soft'?<SoftNavBar links={links} path={path} open={add} onNavigate={target=>path==='/'?softNavigate(target as any):router.push(target as any)} onAdd={()=>setAdd(true)}/>:<View style={{backgroundColor:theme==='minimal'?minimalSurfaces.navigation:C.paper,borderTopWidth:1,borderColor:warm?C.line:theme==='minimal'?'#c9ced8':'#eeece9',flexDirection:'row',paddingHorizontal:10,paddingTop:8,paddingBottom:10,minHeight:70,...(warm?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:32,borderWidth:1}:notes?{marginHorizontal:20,marginBottom:Math.max(12,safeBottom),borderRadius:20,borderTopWidth:0}:{paddingBottom:10+safeBottom})}}>{links.map(x=><Pressable key={x.path} accessibilityRole="tab" accessibilityLabel={x.title||'Добавить'} aria-selected={path===x.path} accessibilityState={{selected:path===x.path}} onPress={()=>x.icon==='plus'?setAdd(true):path!==x.path&&router.push(x.path as any)} style={{flex:1,alignItems:'center',justifyContent:'center',gap:4}}>{x.icon==='plus'?<View style={{width:49,height:49,borderRadius:25,backgroundColor:warm?warmSurfaces.selection:theme==='mist'?'#6d72cf':theme==='minimal'?'#fff':'#786c63',alignItems:'center',justifyContent:'center'}}><Icon name="plus" color={warm||theme==='minimal'?C.ink:'#fff'} size={26}/></View>:<><Icon name={x.icon} filled={!warm&&x.icon==='house'&&path==='/'} color={warm?warmSurfaces.icon:path===x.path?C.ink:inactive} size={warm?24:22}/>{!warm&&<T size={9} color={path===x.path?C.ink:inactive}>{x.title}</T>}</>}</Pressable>)}</View>}<ConfirmationSheet visible={add} title="Добавить" onClose={close} headerTitle={<View style={{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',paddingLeft:36}}><T bold size={20}>Добавить</T><Action icon="mic" label={listening?'Остановить диктовку':'Диктовать голосом'} color={listening?C.red:C.ink} onPress={dictate}/></View>}>
  {listening&&<T center size={12}>Слушаю…</T>}
  {!!voiceError&&<T center size={12} color={C.red}>{voiceError}</T>}
@@ -111,7 +115,7 @@ function SoftNavBar({links,path,open,onNavigate,onAdd}:{links:readonly {path:str
   Animated.spring(x,{toValue:target,...spring.snappy,useNativeDriver:true}).start();
  },[index,slot,reduced,x,visible]);
  // The strip behind the floating bar continues the screen background (gradient end on home, light wash elsewhere).
- return <View style={{backgroundColor:path==='/'?gradients.background[gradients.background.length-1]:'#e8dde3'}}><View onLayout={e=>setWidth(e.nativeEvent.layout.width)} style={{flexDirection:'row',marginHorizontal:16,marginBottom:Math.max(12,safeBottom),paddingVertical:7,borderRadius:30,
+ return <View style={{backgroundColor:path==='/'?gradients.background[gradients.background.length-1]:'#f4f0f2'}}><View onLayout={e=>setWidth(e.nativeEvent.layout.width)} style={{flexDirection:'row',marginHorizontal:16,marginBottom:Math.max(12,safeBottom),paddingVertical:7,borderRadius:30,
   backgroundColor:softHome.navBar,borderWidth:1,borderColor:softHome.navLine,...shadows[3],
   ...(Platform.OS==='web'?{backdropFilter:`blur(${blur.bar}px) saturate(140%)`} as object:{})}}>
   {slot>0&&<Animated.View pointerEvents="none" style={{position:'absolute',top:7,bottom:7,left:0,width:slot,paddingHorizontal:8,opacity:visible,transform:[{translateX:x}]}}>
