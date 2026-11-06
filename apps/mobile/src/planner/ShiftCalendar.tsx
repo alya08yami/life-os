@@ -1,3 +1,4 @@
+import {StyleSheet} from 'react-native';
 import {useApp} from '../context';
 import {usePlannerColors} from './ui';
 import React,{useState} from 'react';
@@ -141,7 +142,7 @@ export function CalendarContent({data,save,reminderWarning,permission,preview,in
  const mist=theme==='mist';
  const calendar=<Frame centerTitle headerColor={mist?'#fff':undefined} title={detail?dateLabel(selected):'Мой календарь'} onBack={goBack}
   right={<Action icon="more" color={mist?'#fff':undefined} label="Настройки календаря" onPress={()=>show({kind:'settings'})}/>}>
-  {!detail&&<SegmentedTabs mistHeader={mist} transparentTrack={theme==='minimal'} values={[...tabs]} value={tab} onChange={value=>setTab(value as Tab)}/>}
+  {!detail&&<SegmentedTabs swipe mistHeader={mist} transparentTrack={theme==='minimal'} values={[...tabs]} value={tab} onChange={value=>setTab(value as Tab)}/>}
   {detail?<>{summary}{events}{options}</>:tab==='Месячные'?
    <PeriodHistory data={data} onEdit={range=>show({kind:'cycle',rangeId:range.id,start:range.startDate})}
     onAdd={()=>show({kind:'cycle',start:today})}/>:<>
@@ -164,12 +165,22 @@ export function CalendarContent({data,save,reminderWarning,permission,preview,in
     return work(date)||entry.events.length||entry.migraine||entry.personal||entry.cycle;
    }).map((date,index)=>{
     const entry=calendarDay(data,date,today,selected);
-    return <Pressable accessibilityRole="button" key={date} onPress={()=>{select(date);setDetail(true);}} style={{paddingVertical:12,paddingHorizontal:10,borderTopWidth:index?0.5:0,borderColor:C.line,gap:3}}>
-     <T center bold size={13}>{dateLabel(date)} · {shiftLabels[entry.shift]}</T>
-     {entry.events.map(event=><T center key={event.id} size={12}>{event.time} · {event.title}</T>)}
-     {!!entry.cycle&&<T center size={11} muted>Месячные</T>}
-     {entry.migraine&&<T center size={11} muted>Мигрень</T>}
-     {entry.personal&&<T center size={11} muted>Половой акт</T>}
+    // Agenda row: the date on the left, the shift and the day's entries on the right — easy to scan down the month.
+    const d=new Date(date+'T12:00:00');const isToday=date===today;
+    const marks=[entry.cycle?'Месячные':'',entry.migraine?'Мигрень':'',entry.personal?'Половой акт':''].filter(Boolean);
+    return <Pressable accessibilityRole="button" accessibilityLabel={dateLabel(date)+', '+shiftLabels[entry.shift]} key={date} onPress={()=>{select(date);setDetail(true);}} style={({pressed})=>({flexDirection:'row',gap:14,paddingVertical:11,paddingHorizontal:14,borderTopWidth:index?StyleSheet.hairlineWidth:0,borderColor:C.line,backgroundColor:pressed?C.lavender:'transparent'})}>
+     <View style={{width:40,alignItems:'center'}}>
+      <T bold size={18} color={isToday?C.purple:C.ink} style={{lineHeight:22}}>{d.getDate()}</T>
+      <T size={11} muted>{d.toLocaleDateString('ru-RU',{weekday:'short'})}</T>
+     </View>
+     <View style={{flex:1,gap:4,justifyContent:'center'}}>
+      <View style={{flexDirection:'row',alignItems:'center',gap:7}}>
+       {entry.shift<2&&<View style={{width:8,height:8,borderRadius:4,backgroundColor:entry.shift===0?'#D9AE76':'#7986A8'}}/>}
+       <T size={13.5} bold={entry.shift<2}>{shiftLabels[entry.shift]}</T>
+      </View>
+      {entry.events.map(event=><T key={event.id} size={13} lines={2}><T size={13} muted>{event.time} </T>{event.title}</T>)}
+      {!!marks.length&&<T size={12} muted>{marks.join(' · ')}</T>}
+     </View>
     </Pressable>;
    })}</View>:<MonthStatistics data={data} month={month}/>}
   </>}

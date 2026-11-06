@@ -25,10 +25,11 @@ function sized(source:any,width:number){
 
 export function MovieGrid({rows,open,showWatched}:{rows:RecordObject[];open:(o:RecordObject)=>void;showWatched:boolean}){
  const [width,setWidth]=useState(0);
- // 4 posters on a regular phone; 3 when four would get too small (very narrow screens); more on tablets.
- const columns=width>=560?6:width>0&&width<300?3:4;
- const poster=width?Math.floor((width-GAP*(columns-1))/columns):0;
- return <View onLayout={e=>setWidth(e.nativeEvent.layout.width)} style={{flexDirection:'row',flexWrap:'wrap',columnGap:GAP,rowGap:10}}>
+ // 3 posters with their names on a phone (2 on very narrow screens), more on tablets.
+ const columns=width>=560?5:width>0&&width<300?2:3;
+ const gap=12;
+ const poster=width?Math.floor((width-gap*(columns-1))/columns):0;
+ return <View onLayout={e=>setWidth(e.nativeEvent.layout.width)} style={{flexDirection:'row',flexWrap:'wrap',columnGap:gap,rowGap:16}}>
   {poster>0&&rows.map(item=><PosterTile key={item.id} item={item} width={poster} watched={showWatched&&item.status==='completed'} onPress={()=>open(item)}/>)}
  </View>;
 }
@@ -38,26 +39,32 @@ function PosterTile({item,width,watched,onPress}:{item:RecordObject;width:number
  const source=pictureSource(item);
  const height=Math.round(width*1.5);
  const year=item.data.year;
+ const rating=Number(item.data.rating);
  return <SoftPressable accessibilityRole="button" onPress={onPress}
-  accessibilityLabel={[item.title,year,watched?'просмотрено':undefined].filter(Boolean).join(', ')}
-  style={{width,height,borderRadius:10,overflow:'hidden',backgroundColor:'#e6dde2',...shadows[1]}}>
-  {source&&!failed
-   ?<Image source={sized(source,width)} resizeMode="cover" onError={()=>setFailed(true)} style={{width,height}}/>
-   :<TitleTile title={item.title} year={year}/>}
-  {watched&&<View style={{position:'absolute',top:5,right:5,width:20,height:20,borderRadius:10,backgroundColor:'rgba(43,41,49,0.74)',alignItems:'center',justifyContent:'center'}}>
-   <Icon name="check" size={12} color="#f4f0f2" strokeWidth={2.4}/>
-  </View>}
+  accessibilityLabel={[item.title,year,watched?'просмотрено':undefined,rating>0?'оценка '+rating:undefined].filter(Boolean).join(', ')}
+  style={{width,gap:6}}>
+  <View style={{width,height,borderRadius:12,overflow:'hidden',backgroundColor:'#ebe3e7',borderWidth:1,borderColor:'rgba(41,38,45,0.06)'}}>
+   {source&&!failed
+    ?<Image source={sized(source,width)} resizeMode="cover" onError={()=>setFailed(true)} style={{width,height}}/>
+    :<TitleTile year={year}/>}
+   {watched&&<View style={{position:'absolute',top:6,right:6,width:22,height:22,borderRadius:11,backgroundColor:'rgba(43,41,49,0.74)',alignItems:'center',justifyContent:'center'}}>
+    <Icon name="check" size={12} color="#f4f0f2" strokeWidth={2.4}/>
+   </View>}
+  </View>
+  {/* Name under the poster — never over the picture — up to two lines. */}
+  <View style={{gap:1}}>
+   <T size={13} lines={2} color="#29262D" style={{lineHeight:17}}>{item.title}</T>
+   {(!!year||rating>0)&&<T size={11.5} lines={1} color="#8a8189" style={{lineHeight:15}}>{[year,rating>0?'★ '+rating:undefined].filter(Boolean).join(' · ')}</T>}
+  </View>
  </SoftPressable>;
 }
 
-/** A film without a cover: a quiet tile with its name — no stand-in pictures. */
-function TitleTile({title,year}:{title:string;year?:string|number}){
- return <View style={{flex:1,padding:7,paddingTop:8,justifyContent:'space-between',backgroundColor:'#e9e0e5'}}>
-  <Icon name="image" size={15} color="#a99ea6"/>
-  <View>
-   <T size={11.5} lines={5} color="#4f4852" style={{lineHeight:15}}>{title}</T>
-   {!!year&&<T size={10.5} color="#8a8189" style={{lineHeight:14,marginTop:2}}>{year}</T>}
-  </View>
+/** A film without a cover: a calm tile with a film icon (the name is shown under the tile). */
+function TitleTile({year,title}:{year?:string|number;title?:string}){
+ return <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:6,padding:10,backgroundColor:'#ebe3e7'}}>
+  <Icon name="play" size={22} color="#a99ea6"/>
+  {!!title&&<T size={15} center lines={4} color="#4f4852">{title}</T>}
+  {!!year&&<T size={11} color="#8a8189">{year}</T>}
  </View>;
 }
 

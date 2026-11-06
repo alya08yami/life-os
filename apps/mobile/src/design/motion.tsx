@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
+import {useKeyboardFrame} from './keyboard';
 import {Animated,Easing,Modal,PanResponder,Pressable,View,type StyleProp,type ViewStyle} from 'react-native';
 import {useApp} from '../context';
 import {useDesignScope,useReducedMotion} from './scope';
@@ -26,6 +27,8 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
  align?:'bottom'|'center';legacyAnimation?:'slide'|'fade';
 }){
  const {enabled,reduced}=useSoftMotion();
+ // While the iPhone keyboard is open the sheet sits over the visible area above it (see design/keyboard).
+ const frame=useKeyboardFrame();
  const [mounted,setMounted]=useState(visible);
  const progress=useRef(new Animated.Value(0)).current;
  // Drag down to close — only from the top strip of a bottom sheet, so scrolling inside the sheet never conflicts.
@@ -58,7 +61,7 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
   }
  },[visible,enabled,reduced]);
  if(!enabled)return <Modal visible={visible} transparent animationType={legacyAnimation} onRequestClose={onRequestClose}>
-  <View style={{flex:1,backgroundColor:'#0005',justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'}}>
+  <View style={[{flex:1,backgroundColor:'#0005',justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'},frame]}>
    <Pressable accessibilityLabel="Закрыть" onPress={onRequestClose} style={{position:'absolute',top:0,left:0,right:0,bottom:0}}/>
    <View style={[{width:'100%'},panelStyle]}>{children}</View>
   </View>
@@ -66,7 +69,7 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
  const rise=progress.interpolate({inputRange:[0,1],outputRange:reduced?[0,0]:[align==='bottom'?48:12,0]});
  const scale=progress.interpolate({inputRange:[0,1],outputRange:reduced||align==='bottom'?[1,1]:[0.96,1]});
  return <Modal visible={mounted} transparent animationType="none" onRequestClose={onRequestClose}>
-  <View style={{flex:1,justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'}}>
+  <View style={[{flex:1,justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'},frame]}>
    <Animated.View pointerEvents="none" style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundColor:'rgba(30,26,34,0.34)',opacity:progress}}/>
    <Pressable accessibilityLabel="Закрыть" onPress={onRequestClose} style={{position:'absolute',top:0,left:0,right:0,bottom:0}}/>
    <Animated.View {...(align==='bottom'?dragResponder.panHandlers:{})} onLayout={e=>{panelTop.current=e.nativeEvent.layout.y;}} style={[{width:'100%',opacity:progress,transform:[{translateY:Animated.add(rise,drag)},{scale}]},panelStyle]}>

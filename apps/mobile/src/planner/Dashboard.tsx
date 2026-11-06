@@ -1,4 +1,6 @@
 import {CalendarContent} from './ShiftCalendar';
+import {useNavDrawer} from '../components/NavDrawer';
+import {HomeHabits} from './HomeHabits';
 import {useShiftPermission,previewShiftSound} from '../data/shift-notifications';
 import {minimalSurfaces,warmSurfaces,softHome} from '../design/themes';
 import {shadows,radii} from '../design/system';
@@ -108,29 +110,29 @@ function dashboardHabits(state:ReturnType<typeof usePlanner>['state']){
  return habits.filter(o=>!exercises.includes(o)||o===primary||!isUntouchedSeed(o));
 }
 
+/**
+ * Home header (Navicon reference): ☰ on the left opens the side menu, «LIFE OS» in the middle, search on the right.
+ * Settings live in the menu and in the profile.
+ */
 function Logo(){
- const {theme}=useApp().state.settings;
- if(theme==='minimal')return <View style={{height:50,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-  <T bold size={20}>LIFE OS</T>
-  <View style={{backgroundColor:'#fff',borderRadius:24}}><Action icon="settings" label="Настройки" onPress={()=>router.push('/settings')}/></View>
- </View>;
- const {navigate}=useSoftNavigation();
- if(theme==='soft')return <View style={{flexDirection:'row',alignItems:'center',height:56}}>
-  <View style={{width:36}}/>
-  <View style={{flex:1,alignItems:'center'}}>
-   <T center size={15} color={softHome.text} style={{fontFamily:'Inter',fontWeight:'300',letterSpacing:7,paddingLeft:7}}>LIFE OS</T>
-  </View>
-  <Action icon="settings" label="Настройки" color={softHome.text} onPress={()=>navigate('/settings')}/>
- </View>;
- const warm=theme==='warm';
- const color=theme==='mist'?'#fff':warm?'#242120':'#7d716a';
- return <View style={{flexDirection:'row',alignItems:'center',height:warm?68:50}}>
-  <View style={{width:36}}/>
+ const {theme}=useApp().state.settings;const C=usePlannerColors();
+ const {open}=useNavDrawer();
+ const soft=theme==='soft',warm=theme==='warm',minimal=theme==='minimal',mist=theme==='mist';
+ const color=soft?softHome.text:mist?'#fff':warm?'#242120':minimal?'#101014':'#7d716a';
+ const square=soft?{backgroundColor:softHome.glass,borderColor:softHome.glassBorder}:warm?{backgroundColor:warmSurfaces.panel,borderColor:C.line}:{backgroundColor:minimal?'#fff':C.paper,borderColor:C.line};
+ return <View style={{flexDirection:'row',alignItems:'center',height:soft?60:warm?68:56}}>
+  <Pressable accessibilityRole="button" accessibilityLabel="Меню" onPress={open} hitSlop={4}
+   style={({pressed})=>({width:44,height:44,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',...square,opacity:pressed?0.75:1})}>
+   <Icon name="menu" size={21} color={warm?warmSurfaces.icon:color}/>
+  </Pressable>
   <View style={{flex:1,alignItems:'center'}}>
    {/* paddingLeft compensates the trailing letter spacing so the word stays optically centred */}
-   <T center size={warm?24:20} color={color} style={{fontFamily:'Inter',letterSpacing:warm?6:5,paddingLeft:warm?6:5,lineHeight:warm?32:24,fontWeight:warm?'300':'400'}}>LIFE OS</T>
+   <T center size={soft?15:warm?22:minimal?19:18} color={color} style={{fontFamily:'Inter',fontWeight:soft||warm?'300':minimal?'600':'400',letterSpacing:soft?7:warm?6:minimal?2:5,paddingLeft:soft?7:warm?6:minimal?2:5}}>LIFE OS</T>
   </View>
-  <Action icon="settings" label="Настройки" color={warm?warmSurfaces.icon:color} onPress={()=>router.push('/settings')}/>
+  <Pressable accessibilityRole="button" accessibilityLabel="Поиск" onPress={()=>router.push('/search')} hitSlop={4}
+   style={({pressed})=>({width:44,height:44,borderRadius:14,alignItems:'center',justifyContent:'center',opacity:pressed?0.7:1})}>
+   <Icon name="search" size={21} color={warm?warmSurfaces.icon:color}/>
+  </Pressable>
  </View>;
 }
 
@@ -148,35 +150,12 @@ export function Dashboard(){const C=usePlannerColors();
  const soft=app.settings.theme==='soft';
  const {navigate}=useSoftNavigation();
  const habitInk=warm?warmSurfaces.icon:soft?softHome.text:'#6d6a86';
- const addHabit=()=>router.push({pathname:'/planner' as any,params:{section:'home',type:'habit',add:'1'}});
  const scheduled=state?.objects.filter(o=>o.data.plannedDate===date&&!o.archivedAt&&o.type!=='habit')??[];
  return <Frame title="LIFE OS" header={false}>
   <Logo/>
   <HomeWeek selected={date} onChange={setDate} onDayPress={day=>setQuickEntry({date:day,sequence:++entrySequence.current})} calendar={calendar}/>
   <View style={warm?{backgroundColor:warmSurfaces.panel,borderRadius:22,borderWidth:1,borderColor:C.line,padding:12,gap:9}:app.settings.theme==='mist'?{backgroundColor:'#f7f7ff',borderRadius:24,padding:10,gap:10}:{gap:soft?12:14}}>
-  {habits.map(habit=>{const Card=soft?SoftPressable:Pressable;return <Card key={habit.id} accessibilityRole="button" accessibilityLabel="Привычка"
-   onPress={()=>(soft?navigate:router.push)({pathname:'/planner' as any,params:{section:'home',id:habit.id}})}
-   style={soft?{paddingHorizontal:14,paddingTop:8,paddingBottom:12,borderRadius:radii.card,backgroundColor:softHome.glass,borderWidth:1,borderColor:softHome.glassBorder,gap:5,...shadows[1]}
-    :{paddingHorizontal:12,paddingTop:6,paddingBottom:10,borderRadius:16,backgroundColor:app.settings.theme==='minimal'?minimalSurfaces.habit:C.paper,gap:4}}>
-   <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-    <Icon name="cat" size={16} color={habitInk}/>
-    <T bold={!warm} size={warm?14:12} color={habitInk} style={{flex:1}}>Привычка</T>
-    <Pressable accessibilityRole="button" accessibilityLabel="Добавить привычку" onPress={addHabit} hitSlop={8}
-     style={{width:28,height:28,alignItems:'center',justifyContent:'center'}}>
-     <Icon name="plus" size={17} color={habitInk}/>
-    </Pressable>
-   </View>
-   <View style={{flexDirection:'row',alignItems:'center',gap:9}}>
-    <HabitCheckbox checked={habitCount(habit,date)>=Number(habit.data.frequency??1)} outline={soft?softHome.muted:undefined}
-     onPress={()=>{patch(habit.id,markHabit(habit,date,new Date().toISOString())).catch(()=>{});}}/>
-    <T size={13} color={soft?softHome.text:undefined} style={{flex:1}} lines={1}>{habit.title}</T>
-    {HABIT_DAYS.map((day,i)=><View key={i} style={{alignItems:'center',gap:3}}>
-     <T size={9} muted={!soft} color={soft?softHome.muted:undefined}>{day}</T>
-     <View style={{width:12,height:12,borderRadius:6,backgroundColor:habitCount(habit,weekDayKey(date,i))>=Number(habit.data.frequency??1)?(soft?softHome.text:'#7cbd9d'):soft?'rgba(244,240,242,0.18)':habit.data.days?.includes((i+1)%7)?'#dedbe7':'#e9e7ee'}}/>
-    </View>)}
-   </View>
-  </Card>;})}
-  {!habits.length&&<Pressable onPress={addHabit} style={{padding:12,borderRadius:16,backgroundColor:soft?softHome.glass:C.lavender}}><T size={13} color={soft?softHome.text:undefined}>＋ Добавить привычку</T></Pressable>}
+  <HomeHabits habits={habits} date={date}/>
   {scheduled.map(o=><Pressable key={o.id} onPress={()=>router.push({pathname:'/planner' as any,params:{section:o.section,id:o.id}})} style={{padding:10,borderRadius:12,backgroundColor:C.paper}}><T size={12}>{o.title}</T><DateLabel date={o.data.plannedDate}/></Pressable>)}
   <DashboardTiles/>
   </View>

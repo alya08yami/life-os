@@ -19,7 +19,7 @@
       "name": "LIFE OS"
     },
     "plugins": [
-      "expo-router",
+      ["expo-router", {"asyncRoutes": false}],
       "expo-sqlite",
       [
         "expo-image-picker",

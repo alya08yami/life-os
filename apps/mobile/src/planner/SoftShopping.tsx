@@ -4,6 +4,7 @@ import type {RecordObject} from '@life-os/domain/planner';
 import {comparableOffers} from '@life-os/domain/planner';
 import {Icon} from '../components/Icon';
 import {SoftPressable} from '../design/SoftPressable';
+import {SwipeableRow} from '../design/SwipeableRow';
 import {palette,shadows} from '../design/system';
 import {usePlanner} from './context';
 import {ConfirmationSheet,T,pictureSource,usePlannerColors} from './ui';
@@ -29,6 +30,20 @@ function Discount({value,large=false}:{value:any;large?:boolean}){
 }
 
 export function SoftProductList({rows,open,lists,list,setList,showLists}:{rows:RecordObject[];open:(o:RecordObject)=>void;lists:string[];list:string;setList:(v:string)=>void;showLists:boolean}){
+ const {patch,update}=usePlanner();
+ const [archived,setArchived]=useState<RecordObject|null>(null);
+ const [removing,setRemoving]=useState<RecordObject|null>(null);
+ const undoTimer=React.useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+ const archive=(item:RecordObject)=>{patch(item.id,{archivedAt:new Date().toISOString()}).then(()=>{setArchived(item);if(undoTimer.current)clearTimeout(undoTimer.current);undoTimer.current=setTimeout(()=>setArchived(null),6000);}).catch(()=>{});};
+ const restore=()=>{if(!archived)return;patch(archived.id,{archivedAt:undefined}).catch(()=>{});setArchived(null);};
+ // «Из списка» only takes the product off the chosen shopping list; the product itself stays in the app.
+ const leaveList=(item:RecordObject)=>update(st=>({...st,objects:st.objects.map(o=>{if(o.id!==item.id)return o;const {list:_omit,...data}=o.data;return {...o,data,updatedAt:new Date().toISOString()};})})).catch(()=>{});
+ const remove=()=>{if(!removing)return;const id=removing.id;update(st=>({...st,objects:st.objects.filter(o=>o.id!==id)})).catch(()=>{});setRemoving(null);};
+ const actions=(item:RecordObject)=>[
+  ...(list?[{key:'list',label:'Из списка',icon:'close' as const,tone:'neutral' as const,collapse:true,onPress:()=>leaveList(item)}]:[]),
+  {key:'archive',label:'В архив',icon:'archive' as const,tone:'muted' as const,collapse:true,onPress:()=>archive(item)},
+  {key:'delete',label:'Удалить',icon:'trash' as const,tone:'danger' as const,onPress:()=>setRemoving(item)},
+ ];
  return <>
   {showLists&&(lists.length
    ?<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:6,paddingRight:4}}>
@@ -38,7 +53,16 @@ export function SoftProductList({rows,open,lists,list,setList,showLists}:{rows:R
      </Pressable>;})}
     </ScrollView>
    :<T size={13} color={palette.inkMuted} style={{paddingHorizontal:4}}>Списков пока нет. Укажите «Список покупок» в карточке товара — он появится здесь.</T>)}
-  {rows.length>0&&<View style={{...surface,paddingVertical:2}}>{rows.map((item,i)=><ProductRow key={item.id} item={item} first={i===0} onPress={()=>open(item)}/>)}</View>}
+  {rows.length>0&&<View style={{...surface,paddingVertical:2}}>{rows.map((item,i)=><SwipeableRow key={item.id} testID={'swipe-'+item.id} surface="rgba(251,249,250,0.94)" actions={actions(item)}><ProductRow item={item} first={i===0} onPress={()=>open(item)}/></SwipeableRow>)}</View>}
+  {archived&&<View accessibilityRole="alert" style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:8,paddingLeft:14,paddingRight:6,borderRadius:16,backgroundColor:palette.graphite}}>
+   <T size={13.5} color="#f4f0f2" style={{flex:1}} lines={1}>«{archived.title}» в архиве</T>
+   <Pressable accessibilityRole="button" onPress={restore} style={{minHeight:36,paddingHorizontal:12,justifyContent:'center'}}><T size={13.5} bold color="#f4f0f2">Вернуть</T></Pressable>
+  </View>}
+  <ConfirmationSheet visible={!!removing} title="Удалить навсегда?" compact onClose={()=>setRemoving(null)}>
+   <T>«{removing?.title}» будет удалён из LIFE OS вместе с фото и заметками. Это нельзя отменить. Чтобы просто убрать из виду, используйте «В архив».</T>
+   <Pressable accessibilityRole="button" onPress={remove} style={{minHeight:46,borderRadius:21,backgroundColor:'#b4474f',alignItems:'center',justifyContent:'center'}}><T bold color="#fff">Удалить</T></Pressable>
+   <Pressable accessibilityRole="button" onPress={()=>setRemoving(null)} style={{minHeight:44,alignItems:'center',justifyContent:'center'}}><T color={palette.inkMuted}>Отмена</T></Pressable>
+  </ConfirmationSheet>
  </>;
 }
 

@@ -1,13 +1,21 @@
 import {usePlannerColors} from './ui';
 import {IntegrationReview} from './IntegrationReview';
 import React,{useState,useRef,useEffect} from 'react';import {View,Pressable,Platform,TextInput,Linking} from 'react-native';import type {RecordObject,Section,FileRef} from '@life-os/domain/planner';import {localDate} from '@life-os/domain/planner';import {T,C,Input,Primary,AttachmentPicker,MealPhotoPicker,SegmentedTabs,ConfirmationSheet,Action,DatePicker} from './ui';import {usePlanner} from './context';import {object} from './seed';import {RichNoteEditor} from '../features/RichNoteEditor';
-export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;compact?:boolean;more?:boolean}){
+import {Icon} from '../components/Icon';
+/**
+ * A note: title and free text, saved automatically.
+ * New note (no `item`): opens empty with the cursor in the title; the record is created only once something is typed,
+ * so leaving an untouched note saves nothing.
+ */
+export function NotesEditor({item:given,compact=false,more=false,newTab}:{item?:RecordObject;compact?:boolean;more?:boolean;newTab?:string}){
  const C=usePlannerColors();
- const {patch}=usePlanner();
- const [title,setTitle]=useState(item.title);
+ const {patch,create,state}=usePlanner();
+ const [id,setId]=useState(given?.id);
+ const item=(id?state?.objects.find(o=>o.id===id):undefined)??given;
+ const [title,setTitle]=useState(given?.title??'');
  const [status,setStatus]=useState(compact?'':'Сохранено');
- const [attachmentsOpen,setAttachmentsOpen]=useState(false);
- const draft=useRef({title:item.title,html:item.data.html??item.description,text:item.description});
+ const draft=useRef({title:given?.title??'',html:given?(given.data.html??given.description):'',text:given?.description??''});
+ const idRef=useRef(given?.id);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const queue=useRef(Promise.resolve());
  const dirty=useRef(false);
@@ -18,9 +26,12 @@ export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;c
   dirty.current=false;
   const value={...draft.current};
   setStatus('Сохраняется…');
-  queue.current=queue.current.catch(()=>{}).then(()=>patch(item.id,{
-   title:value.title.trim()||'Без названия',description:value.text,data:{html:value.html},
-  })).then(()=>setStatus('Сохранено')).catch(()=>{
+  if(!idRef.current&&!value.title.trim()&&!value.text.trim()){setStatus('');return;} // empty new note: nothing to save
+  queue.current=queue.current.catch(()=>{}).then(async()=>{
+   const fields={title:value.title.trim()||'Без названия',description:value.text,data:{html:value.html}};
+   if(!idRef.current){const created=await create('note','work',fields.title,{tab:newTab??'Работа',html:value.html});idRef.current=created.id;setId(created.id);}
+   await patch(idRef.current!,fields);
+  }).then(()=>setStatus(compact?'':'Сохранено')).catch(()=>{
    dirty.current=true;
    setStatus('Не удалось сохранить. Изменения остались в редакторе.');
   });
@@ -34,46 +45,41 @@ export function NotesEditor({item,compact=false,more=false}:{item:RecordObject;c
   timer.current=setTimeout(save,700);
  };
  useEffect(()=>()=>{if(timer.current)save();},[]);
- const togglePin=()=>patch(item.id,{pinned:!item.pinned}).catch(()=>{});
- const toggleFavorite=()=>patch(item.id,{favorite:!item.favorite}).catch(()=>{});
- const titleInput=<TextInput accessibilityLabel="Заголовок заметки" value={title}
-  onChangeText={value=>{setTitle(value);changed(draft.current.html,draft.current.text);}} onBlur={save}
-  style={{fontFamily:'Inter',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0}}/>;
- const files=<AttachmentPicker documentsOnly={item.section==='work'} files={item.attachments} onChange={values=>patch(item.id,{attachments:values}).catch(()=>{})}/>;
- const links=<Input label="Ссылки" value={item.data.links??''} onChange={value=>patch(item.id,{data:{links:value}}).catch(()=>{})}/>;
- const updated=new Date(item.updatedAt);
+ const togglePin=()=>{if(item)patch(item.id,{pinned:!item.pinned}).catch(()=>{});};
+ const toggleFavorite=()=>{if(item)patch(item.id,{favorite:!item.favorite}).catch(()=>{});};
+ const titleInput=<TextInput accessibilityLabel="Заголовок заметки" value={title} autoFocus={!given}
+  onChangeText={value=>{setTitle(value);draft.current.title=value;changed(draft.current.html,draft.current.text);}} onBlur={save}
+  style={{fontFamily:'Inter',fontSize:compact?28:25,fontWeight:'600',color:C.ink,padding:0,minWidth:0,...(Platform.OS==='web'?{outlineStyle:'none'} as object:{})}}/>;
+ const files=item?<AttachmentPicker documentsOnly={item.section==='work'} files={item.attachments} onChange={values=>patch(item.id,{attachments:values}).catch(()=>{})}/>:null;
+ const links=item?<Input label="Ссылки" value={item.data.links??''} onChange={value=>patch(item.id,{data:{links:value}}).catch(()=>{})}/>:null;
+ const updated=new Date(item?.updatedAt??'');
  const timestamp=Number.isNaN(updated.getTime())?'':updated.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' · '+updated.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
  return <View style={{backgroundColor:compact?C.paper:'#fffefa',padding:17,borderRadius:20,gap:14,minHeight:480,flexGrow:1}}>
   {compact?<View style={{flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:1,borderColor:C.line,paddingBottom:15}}>
    <View style={{flex:1,minWidth:0,gap:3}}>{titleInput}{timestamp&&<T muted size={11}>Изменено {timestamp}</T>}</View>
-   <View style={{flexDirection:'row',gap:4}}>
+   {item&&<View style={{flexDirection:'row',gap:4}}>
     <View style={{backgroundColor:C.lavender,borderRadius:10}}><Action icon="bookmark" label={item.pinned?'Открепить':'Закрепить'} filled={!!item.pinned} color={C.purple} onPress={togglePin}/></View>
     <View style={{backgroundColor:C.lavender,borderRadius:10}}><Action icon="heart" label={item.favorite?'Убрать из избранного':'В избранное'} filled={!!item.favorite} color={C.purple} onPress={toggleFavorite}/></View>
-   </View>
+   </View>}
   </View>:<>{titleInput}<View style={{flexDirection:'row',gap:8}}>
-   <Primary quiet onPress={togglePin}>{item.pinned?'Открепить':'Закрепить'}</Primary>
-   <Primary quiet onPress={toggleFavorite}>{item.favorite?'♥':'♡'}</Primary>
+   {item&&<Primary quiet onPress={togglePin}>{item.pinned?'Открепить':'Закрепить'}</Primary>}
+   {item&&<Primary quiet onPress={toggleFavorite}>{item.favorite?'♥':'♡'}</Primary>}
   </View></>}
-  <RichNoteEditor initial={item.data.html??item.description} onChange={changed} onBlur={save} compact={compact} more={more}
-   afterBody={compact?<View style={{gap:8}}>
-    <Pressable accessibilityRole="button" accessibilityState={{expanded:attachmentsOpen}} onPress={()=>setAttachmentsOpen(value=>!value)}
-     style={{alignSelf:'flex-start',borderRadius:10,backgroundColor:C.lavender,paddingHorizontal:12,paddingVertical:7}}>
-     <T size={12} bold color={C.purple}>＋ Добавить</T>
-    </Pressable>
-    {(attachmentsOpen||item.attachments.some(file=>!file.mime.startsWith('image/')))&&files}
-    {(attachmentsOpen||more)&&links}
-   </View>:undefined}/>
+  <RichNoteEditor initial={given?(given.data.html??given.description):''} onChange={changed} onBlur={save} compact={compact} more={more}
+   // Files and links live behind the header's «•••» (or show when the note already has documents): no extra button
+   // floating above the text, nothing between the text and the keyboard.
+   afterBody={compact&&item&&(more||item.attachments.some(file=>!file.mime.startsWith('image/')))?<View style={{gap:8}}>{files}{more&&links}</View>:undefined}/>
   {!compact&&<>{files}{links}</>}
   {!!status&&<T size={11} muted>{status}</T>}
  </View>;
 }
 
 export const defaults:Record<string,string>={relationships:'relationship',shopping:'product',health:'checkup',food:'recipe',home:'homeTask',work:'note',parents:'note',regular:'regular',finance:'transaction',movies:'movie',travel:'place',wardrobe:'garment'};
-export function ObjectEditor({item,section,type:initialType,initialData,initialTitle,onSaved,onClose}:{item?:RecordObject;section:Section;type?:string;initialData?:any;initialTitle?:string;onSaved:(o:RecordObject)=>void;onClose:()=>void}){const C=usePlannerColors();const {patch,update,state}=usePlanner();const [draft,setDraft]=useState<RecordObject>(()=>item?JSON.parse(JSON.stringify(item)):object(initialType??defaults[section],section,initialTitle??'',{year:new Date().getFullYear(),plannedDate:'',category:section==='home'?'Убрать':section==='food'?'Завтраки':undefined,tabletsPerDay:2,tabletsPerPackage:60,purchasedPackages:1,yellowDays:7,redDays:2,durationPerUnit:30,purchasedQuantity:1,thresholdMode:'percent',yellow:50,red:75,days:[1,2,3,4,5],frequency:1,notifications:true,tab:'Работа',servings:1,ingredients:[],steps:[],...initialData}));const [error,setError]=useState('');const d=draft.data;const data=(key:string,value:any)=>setDraft(o=>({...o,data:{...o.data,[key]:value}}));const [method,setMethod]=useState(initialData?.captureMethod??(initialType==='dish'?'Вручную':'Ссылка'));const [source,setSource]=useState('');const [deleteOpen,setDeleteOpen]=useState(false);const [ready,setReady]=useState(false);const [saving,setSaving]=useState(false);const savingLock=useRef(false);const [duplicate,setDuplicate]=useState<RecordObject|null>(null);
+export function ObjectEditor({item,section,type:initialType,initialData,initialTitle,onSaved,onClose}:{item?:RecordObject;section:Section;type?:string;initialData?:any;initialTitle?:string;onSaved:(o:RecordObject)=>void;onClose:()=>void}){const C=usePlannerColors();const {patch,update,state}=usePlanner();const [draft,setDraft]=useState<RecordObject>(()=>item?JSON.parse(JSON.stringify(item)):object(initialType??defaults[section],section,initialTitle??'',{year:new Date().getFullYear(),plannedDate:'',category:section==='home'?'Убрать':section==='food'?'Завтраки':undefined,tabletsPerDay:2,tabletsPerPackage:60,purchasedPackages:1,yellowDays:7,redDays:2,durationPerUnit:30,purchasedQuantity:1,thresholdMode:'percent',yellow:50,red:75,days:[1,2,3,4,5],frequency:1,notifications:true,tab:'Работа',servings:1,ingredients:[],steps:[],...initialData}));const [error,setError]=useState('');const d=draft.data;const data=(key:string,value:any)=>setDraft(o=>({...o,data:{...o.data,[key]:value}}));const [method,setMethod]=useState(initialData?.captureMethod??(initialType==='dish'?'Вручную':'Ссылка'));const [autoFill,setAutoFill]=useState(false);const [source,setSource]=useState('');const [deleteOpen,setDeleteOpen]=useState(false);const [ready,setReady]=useState(false);const [saving,setSaving]=useState(false);const savingLock=useRef(false);const [duplicate,setDuplicate]=useState<RecordObject|null>(null);
 const numeric=(key:string,label:string)=> <Input key={key} number label={label} value={String(d[key]??'')} onChange={v=>data(key,v===''?undefined:Number(v.replace(',','.')))}/>;
 const save=async()=>{if(savingLock.current)return;if(!draft.title.trim())return setError('Укажите название');if(draft.type==='regular'&&(!(d.durationPerUnit>0)||!(d.purchasedQuantity>0)||!(Number(d.red)>Number(d.yellow))||d.thresholdMode==='percent'&&d.red>100))return setError('Укажите срок и количество больше нуля. Красный порог должен быть выше жёлтого.');if(draft.type==='medication'&&(!(d.tabletsPerDay>0)||!(d.tabletsPerPackage>0)||!(d.purchasedPackages>0)||d.redDays<0||d.yellowDays<d.redDays))return setError('Проверьте количество и пороги запаса');if(draft.type==='movie'&&d.rating!==undefined&&(!(d.rating>=0)||d.rating>10))return setError('Оценка от 0 до 10');if(source&&method==='Ссылка'&&!/^https?:\/\//.test(source))return setError('Укажите ссылку HTTP или HTTPS');if(d.reminder&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.reminder))return setError('Время: ЧЧ:ММ, от 00:00 до 23:59');if(d.plannedDate&&!/^\d{4}-\d{2}-\d{2}$/.test(d.plannedDate))return setError('Дата: ГГГГ-ММ-ДД');if(draft.type==='checkup'||draft.type==='analysis'){if(!Number.isInteger(d.year)||d.year<1900||d.year>2200)return setError('Укажите год от 1900 до 2200');}if(draft.type==='transaction'&&(!(Number(d.amount)>0)||!Number.isFinite(Number(d.amount))))return setError('Укажите положительную сумму');if(!item&&draft.type==='product'){const normalize=(v:any)=>String(v??'').trim().toLocaleLowerCase();const found=state?.objects.find(o=>o.type==='product'&&!o.archivedAt&&normalize(o.title)===normalize(draft.title)&&normalize(o.data.brand)===normalize(d.brand)&&normalize(o.data.model)===normalize(d.model)&&normalize(o.data.variant)===normalize(d.variant));if(found){setDuplicate(found);return setError('Этот товар уже сохранён.');}}savingLock.current=true;setSaving(true);try{const next={...draft,data:{...draft.data,...(source&&method==='Ссылка'?{sourceUrl:source}:{})},title:draft.title.trim(),updatedAt:new Date().toISOString()};if(item)await patch(item.id,next);else await update(s=>({...s,objects:[...s.objects,next]}));onSaved(next);}catch{setError('Не удалось сохранить. Попробуйте ещё раз.');}finally{savingLock.current=false;setSaving(false);}};
-return <View style={{gap:14}}>{!item&&['product','recipe','dish','movie','place','analysis'].includes(draft.type)&&<><SegmentedTabs values={draft.type==='product'?['Ссылка','Скриншот','Фото','Название']:draft.type==='dish'?['Вручную','По рецепту','Из фото']:['Вручную','Ссылка','Фото','Документ']} value={method} onChange={setMethod}/>{(method==='Ссылка'||method==='Название')&&<Input placeholder={method==='Ссылка'?'Вставьте ссылку…':'Введите название…'} value={source} onChange={setSource}/>}{method==='По рецепту'&&state?.objects.filter(o=>o.type==='recipe'&&!o.archivedAt).map(o=><Primary key={o.id} quiet onPress={()=>setDraft(v=>({...v,title:o.title,data:{...o.data,sourceRecipeId:o.id},attachments:o.attachments}))}>{o.title}</Primary>)}<AttachmentPicker documentsOnly={section==='work'&&draft.type==='note'} files={draft.attachments} onChange={attachments=>setDraft(o=>({...o,attachments}))}/><IntegrationReview draft={draft} source={source} onApply={changes=>setDraft(o=>({...o,...changes}))}/></>}
-<Input label="Название" value={draft.title} onChange={title=>setDraft(o=>({...o,title}))}/>
+return <View style={{gap:14}}><Input label="Название" value={draft.title} onChange={title=>setDraft(o=>({...o,title}))}/>
+{/* Title first; filling from a link, photo, recipe or text is tucked behind one quiet row. */}{!item&&['product','recipe','dish','movie','place','analysis'].includes(draft.type)&&<><Pressable accessibilityRole="button" accessibilityState={{expanded:autoFill}} aria-expanded={autoFill} onPress={()=>setAutoFill(v=>!v)} style={{minHeight:44,flexDirection:'row',alignItems:'center',gap:8}}><Icon name="ai" size={16} color={C.purple}/><T size={13.5} color={C.purple} style={{flex:1}}>Заполнить автоматически — ссылка, фото{draft.type==='dish'?', рецепт':''}</T><View style={{transform:[{rotate:autoFill?'180deg':'0deg'}]}}><Icon name="chevronDown" size={16} color={C.purple}/></View></Pressable>{autoFill&&<><SegmentedTabs values={draft.type==='product'?['Ссылка','Скриншот','Фото','Название']:draft.type==='dish'?['Вручную','По рецепту','Из фото']:['Вручную','Ссылка','Фото','Документ']} value={method} onChange={setMethod}/>{(method==='Ссылка'||method==='Название')&&<Input placeholder={method==='Ссылка'?'Вставьте ссылку…':'Введите название…'} value={source} onChange={setSource}/>}{method==='По рецепту'&&state?.objects.filter(o=>o.type==='recipe'&&!o.archivedAt).map(o=><Primary key={o.id} quiet onPress={()=>setDraft(v=>({...v,title:o.title,data:{...o.data,sourceRecipeId:o.id},attachments:o.attachments}))}>{o.title}</Primary>)}<AttachmentPicker documentsOnly={section==='work'&&draft.type==='note'} files={draft.attachments} onChange={attachments=>setDraft(o=>({...o,attachments}))}/><IntegrationReview draft={draft} source={source} onApply={changes=>setDraft(o=>({...o,...changes}))}/></>}</>}
 {section==='health'&&!item&&<SegmentedTabs values={['Чек-ап','Препарат','Анализ']} value={draft.type==='medication'?'Препарат':draft.type==='analysis'?'Анализ':'Чек-ап'} onChange={s=>setDraft(o=>({...o,type:s==='Препарат'?'medication':s==='Анализ'?'analysis':'checkup'}))}/>}
 {draft.type==='checkup'&&<>{numeric('year','Год')}<DatePicker label="Плановая дата" value={d.plannedDate??''} onChange={v=>data('plannedDate',v)}/></>}
 {draft.type==='medication'&&<><Primary quiet onPress={()=>{const url=d.sourceUrl||'https://tabletki.ua/uk/search/'+encodeURIComponent(draft.title)+'/';if(/^https?:\/\//.test(url))Linking.openURL(url).catch(()=>setError('Не удалось открыть сайт'));}}>◉ Найти на Таблетки.ua　↗</Primary><Input label="Действующее вещество" value={d.substance??''} onChange={v=>data('substance',v)}/>{numeric('tabletsPerDay','Сколько таблеток в день?')}{numeric('tabletsPerPackage','Сколько таблеток в пачке?')}{numeric('purchasedPackages','Количество купленных пачек')}{numeric('yellowDays','Жёлтый статус: осталось дней')}{numeric('redDays','Красный статус: осталось дней')}<Input label="Ссылка на препарат" value={d.sourceUrl??''} onChange={v=>data('sourceUrl',v)}/><Input label="Время напоминания · ЧЧ:ММ" value={d.reminder??''} onChange={v=>data('reminder',v)}/></>}
@@ -88,4 +94,4 @@ return <View style={{gap:14}}>{!item&&['product','recipe','dish','movie','place'
 {draft.type==='place'&&<><Input label="Google Maps" value={d.sourceUrl??source} onChange={v=>data('sourceUrl',v)}/><Input label="Адрес, город или страна" value={d.address??''} onChange={v=>data('address',v)}/><Input label="Поездка" value={d.trip??''} onChange={v=>data('trip',v)}/>{numeric('order','Порядок в поездке')}</>}
 {draft.type==='transaction'&&<><SegmentedTabs values={['Доходы','Расходы']} value={d.direction??'Доходы'} onChange={v=>data('direction',v)}/>{numeric('amount','Сумма')}<Input label="Валюта" value={d.currency??'$'} onChange={v=>data('currency',v)}/><DatePicker label="Дата" value={d.plannedDate||localDate()} onChange={v=>data('plannedDate',v)}/></>}
 {draft.type==='note'&&<SegmentedTabs values={['Работа','Бизнес']} value={d.tab??'Работа'} onChange={v=>data('tab',v)}/>}
-<Input label="Заметка" multiline value={draft.notes} onChange={notes=>setDraft(o=>({...o,notes}))}/>{item&&<AttachmentPicker documentsOnly={section==='work'&&draft.type==='note'} files={draft.attachments} onChange={attachments=>setDraft(o=>({...o,attachments}))}/>}{!item&&!['product','recipe','dish','movie','place','analysis'].includes(draft.type)&&<AttachmentPicker documentsOnly={section==='work'&&draft.type==='note'} files={draft.attachments} onChange={attachments=>setDraft(o=>({...o,attachments}))}/>}<Primary quiet onPress={()=>data('notifications',d.notifications===false)}>{d.notifications===false?'Уведомления выключены':'✓ Уведомления включены'}</Primary>{error&&<T color={C.red}>{error}</T>}{duplicate&&<Primary quiet onPress={()=>onSaved(duplicate)}>Открыть существующий товар</Primary>}<Primary disabled={saving} onPress={()=>save()}>{saving?'Сохраняется…':'Сохранить'}</Primary>{item&&<><Primary quiet onPress={()=>{patch(item.id,{archivedAt:item.archivedAt?undefined:new Date().toISOString()}).then(onClose).catch(()=>{});}}>{item.archivedAt?'Восстановить':'В архив'}</Primary><Primary quiet onPress={()=>setDeleteOpen(true)}>Удалить</Primary><ConfirmationSheet title="Удалить элемент?" visible={deleteOpen} onClose={()=>setDeleteOpen(false)}><T>Элемент переместится в архив. Его можно восстановить.</T><Primary onPress={()=>patch(item.id,{archivedAt:new Date().toISOString(),status:'trashed'}).then(onClose).catch(()=>{})}>Удалить</Primary></ConfirmationSheet></>}</View>;}
+<Input label="Заметка" multiline value={draft.notes} onChange={notes=>setDraft(o=>({...o,notes}))}/>{item&&<AttachmentPicker documentsOnly={section==='work'&&draft.type==='note'} files={draft.attachments} onChange={attachments=>setDraft(o=>({...o,attachments}))}/>}{!item&&!['product','recipe','dish','movie','place','analysis'].includes(draft.type)&&<AttachmentPicker documentsOnly={section==='work'&&draft.type==='note'} files={draft.attachments} onChange={attachments=>setDraft(o=>({...o,attachments}))}/>}<Primary quiet onPress={()=>data('notifications',d.notifications===false)}>{d.notifications===false?'Уведомления выключены':'✓ Уведомления включены'}</Primary>{error&&<T color={C.red}>{error}</T>}{duplicate&&<Primary quiet onPress={()=>onSaved(duplicate)}>Открыть существующий товар</Primary>}<View style={[{paddingTop:6,paddingBottom:4,backgroundColor:C.bg},Platform.OS==='web'?{position:'sticky' as any,bottom:0,zIndex:2}:null]}>{/* stays at the bottom of the sheet while scrolling — in reach of the thumb */}<Primary disabled={saving} onPress={()=>save()}>{saving?'Сохраняется…':'Сохранить'}</Primary></View>{item&&<><Primary quiet onPress={()=>{patch(item.id,{archivedAt:item.archivedAt?undefined:new Date().toISOString()}).then(onClose).catch(()=>{});}}>{item.archivedAt?'Восстановить':'В архив'}</Primary><Primary quiet onPress={()=>setDeleteOpen(true)}>Удалить</Primary><ConfirmationSheet title="Удалить элемент?" visible={deleteOpen} onClose={()=>setDeleteOpen(false)}><T>Элемент переместится в архив. Его можно восстановить.</T><Primary onPress={()=>patch(item.id,{archivedAt:new Date().toISOString(),status:'trashed'}).then(onClose).catch(()=>{})}>Удалить</Primary></ConfirmationSheet></>}</View>;}

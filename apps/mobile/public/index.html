@@ -40,8 +40,20 @@
       /* iOS 26 tints the status-bar area (and the bottom edge) with the page's body background, not with theme-color.
          So the body must match the colour each screen shows at the top: the app updates it per screen
          (graphite only on the Soft Future home screen). Start light so no dark haze appears before the app paints. */
-      html, body { background: #f4f0f2; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+      html, body { background: var(--boot-bg, #f4f0f2); overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
     </style>
+    <script>
+      /* First frame in the remembered theme's colours (set by the app after each launch), so start-up never flashes another theme. */
+      (function () {
+        try {
+          var t = localStorage.getItem('life-os.theme') || 'soft';
+          var home = /^\/(life-os\/?)?$/.test(location.pathname);
+          var bg = { soft: home ? '#35343D' : '#f4f0f2', light: '#F6F5F3', dark: '#1B2037', minimal: '#f0dce3', mist: '#ededff', warm: '#f6f2ed' }[t] || '#f4f0f2';
+          document.documentElement.style.setProperty('--boot-bg', bg);
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>

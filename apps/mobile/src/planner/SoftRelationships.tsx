@@ -74,7 +74,7 @@ export function SoftRelationships({items,adding,closeAdd,open,searching=false,cl
  };
  const surface={backgroundColor:'rgba(251,249,250,0.94)',borderRadius:18,borderWidth:1,borderColor:'rgba(41,38,45,0.06)',overflow:'hidden' as const,...shadows[1]};
  return <>
-  <SegmentedTabs values={TABS} value={current} activeColor={look.color} onChange={value=>{setEditing(undefined);setError('');closeAdd();setTab(value);}}/>
+  <SegmentedTabs swipe values={TABS} value={current} activeColor={look.color} onChange={value=>{setEditing(undefined);setError('');closeAdd();setTab(value);}}/>
   {searching&&<View style={{flexDirection:'row',alignItems:'center',gap:8,borderRadius:13,backgroundColor:'rgba(251,249,250,0.94)',borderWidth:1,borderColor:'rgba(41,38,45,0.06)',paddingLeft:12}}>
    <Icon name="search" size={17} color={palette.inkMuted}/>
    <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={'Поиск: '+current} placeholderTextColor="#8a8189" accessibilityLabel={'Поиск по вкладке '+current}

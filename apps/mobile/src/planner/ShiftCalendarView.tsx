@@ -33,8 +33,9 @@ const cap=(s:string)=>s[0].toUpperCase()+s.slice(1);
 export const cardStyle={backgroundColor:'#faf8f5',borderRadius:14,borderWidth:1,borderColor:'#ede8e3'} as const;
 
 /** Top stripe showing the shift of the day. */
-const firstShiftStripe="#FFFF99";
-const secondShiftStripe="#7FC7FF";
+/** Shifts: soft sunny champagne (morning) and calm twilight indigo (evening/night) — part of the Soft Future palette. */
+export const firstShiftStripe="#D9AE76";
+export const secondShiftStripe="#7986A8";
 export function ShiftStripe({shift,height=4}:{shift:number;height?:number}){
  if(shift>1)return null;
  return <View pointerEvents="none" accessible={false} aria-hidden testID={'shift-stripe-'+(shift+1)}
@@ -84,7 +85,7 @@ export function Marker({kind,size=13}:{kind:keyof typeof markerStyles;size?:numb
 }
 export function ShiftBadge({shift,size=38}:{shift:number;size?:number}){
  return <View style={{height:size,width:size,borderRadius:size/2,alignItems:'center',justifyContent:'center',backgroundColor:['#fbf0d8','#e9eefb','#eeece9','#eeece9'][shift]}}>
-  <T bold size={size*.52} color={shiftColors[shift]}>{['1','2','–','○'][shift]}</T>
+  <T bold size={size*.52} color={['#A77A43','#56628A',shiftColors[2],shiftColors[3]][shift]}>{['1','2','–','○'][shift]}</T>
  </View>;
 }
 export function MonthGrid({data,month,today,selected,onSelect,onMonth,mode='grid'}:{data:ShiftCalendarData;month:string;today:string;selected:string;onSelect:(day:string)=>void;onMonth:(delta:number)=>void;mode?:'grid'|'heading'}){
@@ -96,6 +97,7 @@ export function MonthGrid({data,month,today,selected,onSelect,onMonth,mode='grid
  const dates=monthCells(month);
  const swipe=React.useMemo(()=>PanResponder.create({
   onMoveShouldSetPanResponderCapture:(_,g)=>Math.abs(g.dx)>12&&Math.abs(g.dx)>1.5*Math.abs(g.dy),
+  onPanResponderTerminationRequest:()=>false, // the month swipe stays with the calendar, not the screen's tabs
   onPanResponderRelease:(_,g)=>{
    if(Math.abs(g.dx)>48&&Math.abs(g.dx)>Math.abs(g.dy))onMonth(g.dx<0?1:-1);
   },
@@ -146,43 +148,37 @@ export function MonthStatistics({data,month}:{data:ShiftCalendarData;month:strin
   {label:'Половой акт',color:markerStyles.personal.color,count:data.personal.filter(entry=>entry.date.startsWith(month)).length},
  ];
  const total=categories.reduce((sum,item)=>sum+item.count,0);
- const circumference=2*Math.PI*61;
- let offset=0;
- return <View style={{...cardStyle,backgroundColor:theme==='minimal'?minimalSurfaces.calendarCard:C.paper,borderColor:C.line,padding:16,gap:12}}>
-  <T center bold size={16}>Статистика за месяц</T>
-  <View accessible={false} aria-hidden style={{alignItems:'center'}}>
-   <Svg width={164} height={164} viewBox="0 0 164 164">
-    <Circle cx={82} cy={82} r={61} fill="none" stroke={C.line} strokeWidth={20}/>
-    {categories.filter(item=>item.count>0).map(item=>{
-     const length=circumference*item.count/total;
-     const start=offset;
-     offset+=length;
-     return <Circle key={item.label} cx={82} cy={82} r={61} rotation={-90} originX={82} originY={82}
-      fill="none" stroke={item.color} strokeWidth={20} strokeDasharray={total===item.count?undefined:[length,circumference-length]}
-      strokeDashoffset={-start}/>;
-    })}
-   </Svg>
+ const name=cap(monthFormat.format(new Date(month+'-01T12:00:00Z')).replace(/ г\.$/,''));
+ // Only what is recorded in the calendar this month — no shift counts, no invented figures.
+ return <View style={{gap:10}}>
+  <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',paddingHorizontal:4}}>
+   <T bold size={16}>{name}</T><T size={12.5} muted>{total?`Всего записей: ${total}`:'Записей пока нет'}</T>
   </View>
-  {categories.map(item=><View key={item.label} style={{flexDirection:'row',alignItems:'center',gap:9}}>
-   <View style={{width:10,height:10,borderRadius:5,backgroundColor:item.color}}/>
-   <T size={13} style={{flex:1}}>{item.label}</T><T size={13} bold>{item.count}</T>
-  </View>)}
+  <View style={{flexDirection:'row',gap:8}}>
+   {categories.map(item=><View key={item.label} style={{flex:1,...cardStyle,backgroundColor:theme==='minimal'?minimalSurfaces.calendarCard:C.paper,borderColor:C.line,paddingVertical:14,paddingHorizontal:12,gap:8}}>
+    <View style={{width:10,height:10,borderRadius:5,backgroundColor:item.color}}/>
+    <T bold size={26} style={{lineHeight:30}}>{item.count}</T>
+    <T size={12} muted lines={2} style={{lineHeight:15}}>{item.label}</T>
+   </View>)}
+  </View>
  </View>;
 }
-
 export function ShiftLegend(){
  const C=usePlannerColors();
  const {theme}=useApp().state.settings;
  const legend:[React.ReactNode,string][]=[
-  [<Swatch stripe={firstShiftStripe}/>,'Первая смена'],[<Swatch stripe={secondShiftStripe}/>,'Вторая смена'],[<Swatch fill={theme==='mist'?mistCalendar.period:periodPink}/>,'Месячные'],
-  [<Swatch fill={theme==='minimal'?minimalSurfaces.event:theme==='mist'?mistCalendar.event:eventFill}/>,'Событие'],[<MigraineMark size={13}/>,'Мигрень'],[<HeartMark size={13}/>,'Половой акт'],
-  [<Swatch outline={forecastRose}/>,'Прогноз месячных'],[<View style={ovulationDot}/>,'Прогноз овуляции'],
+  [<Icon name="sun" size={15} color={firstShiftStripe} strokeWidth={2}/>,'Первая смена'],[<Icon name="moon" size={15} color={secondShiftStripe} strokeWidth={2}/>,'Вторая смена'],
+  [<Swatch fill={theme==='mist'?mistCalendar.period:periodPink}/>,'Месячные'],[<Swatch outline={forecastRose}/>,'Прогноз месячных'],
+  [<View style={ovulationDot}/>,'Прогноз овуляции'],[<Swatch fill={theme==='minimal'?minimalSurfaces.event:theme==='mist'?mistCalendar.event:eventFill}/>,'Событие'],
+  [<MigraineMark size={13}/>,'Мигрень'],[<HeartMark size={13}/>,'Половой акт'],
  ];
- return <View style={{...cardStyle,backgroundColor:theme==='minimal'?minimalSurfaces.calendarCard:C.paper,borderColor:C.line,padding:10,gap:9}}>{[0,3,6].map(start=><View key={start} style={{flexDirection:'row',gap:3}}>
-  {legend.slice(start,start+3).map(([icon,label])=><View key={label} style={{flex:1,flexDirection:'row',alignItems:'center',gap:6}}>
-   <View style={{width:18,alignItems:'center'}}>{icon}</View><T size={10.8} style={{flexShrink:1}}>{label}</T>
+ // Two even columns on phones (each item keeps its icon column), wrapping naturally on wider screens.
+ return <View style={{...cardStyle,backgroundColor:theme==='minimal'?minimalSurfaces.calendarCard:C.paper,borderColor:C.line,paddingVertical:12,paddingHorizontal:14,flexDirection:'row',flexWrap:'wrap',rowGap:10}}>
+  {legend.map(([icon,label])=><View key={label} style={{width:'50%',minWidth:140,flexDirection:'row',alignItems:'center',gap:8,paddingRight:6}}>
+   <View style={{width:18,height:18,alignItems:'center',justifyContent:'center'}}>{icon}</View>
+   <T size={12.5} color={C.ink} style={{flexShrink:1,lineHeight:16}}>{label}</T>
   </View>)}
- </View>)}</View>;
+ </View>;
 }
 export function DaySummary({data,date,onPress}:{data:ShiftCalendarData;date:string;onPress?:()=>void}){const C=usePlannerColors();
  const minimal=useApp().state.settings.theme==='minimal';

@@ -14,9 +14,12 @@ html=html.split('%BASE%').join(base);fs.writeFileSync(indexFile,html);
 const skip=new Set(['sw.js','404.html','metadata.json','.nojekyll']);
 const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);
 const files=walk(dir).map(f=>path.relative(dir,f).split(path.sep).join('/')).filter(f=>!skip.has(f)).sort();
+// Optional app fonts are cached when first chosen or previewed, not downloaded for everyone at install.
+const optional=/\/(Manrope|Onest|GolosText|Rubik)\.[0-9a-f]+\.ttf$/;
+const precache=files.filter(f=>!optional.test('/'+f));
 const hash=crypto.createHash('sha256');for(const f of files){hash.update(f);hash.update(fs.readFileSync(path.join(dir,f)));}
 const build=hash.digest('hex').slice(0,16);
-const urls=files.map(f=>f==='index.html'?base+'/':base+'/'+encodeURI(f));
+const urls=precache.map(f=>f==='index.html'?base+'/':base+'/'+encodeURI(f));
 const template=fs.readFileSync(path.join(__dirname,'sw-template.js'),'utf8');
 fs.writeFileSync(path.join(dir,'sw.js'),template.replace('__BUILD__',()=>build).replace("'__BASE__'",()=>JSON.stringify(base)).replace('__PRECACHE__',()=>JSON.stringify(urls)));
 const bytes=files.reduce((n,f)=>n+fs.statSync(path.join(dir,f)).size,0);
