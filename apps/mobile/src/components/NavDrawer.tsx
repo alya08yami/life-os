@@ -1,3 +1,5 @@
+import {handoffKeyboard} from '../design/keyboard-handoff';
+import {instant} from '../design/instant';
 import React,{createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {Animated,BackHandler,PanResponder,Platform,Pressable,ScrollView,View,useWindowDimensions} from 'react-native';
 import {router,usePathname,type Href} from 'expo-router';
@@ -59,7 +61,8 @@ function NavDrawer({visible,onClose}:{visible:boolean;onClose:()=>void}){
  const ink=soft?softHome.text:C.ink;const muted=soft?softHome.muted:C.muted;
  const surface=soft?{backgroundColor:'rgba(96,88,99,0.66)',borderColor:'rgba(255,255,255,0.16)'}:{backgroundColor:C.paper,borderColor:C.line};
  const activeBg=soft?'rgba(244,240,242,0.14)':C.lavender;
- const go=(href:Href)=>{onClose();setTimeout(()=>router.push(href),0);};
+ // Close and open in the same tap (no timer): a screen that starts with a field (search) then gets the keyboard at once.
+ const go=(href:Href)=>instant(()=>{if(href==='/search')handoffKeyboard();onClose();router.push(href);});
  const Row=({icon,label,active,onPress,right,indent=false}:{icon:IconName;label:string;active?:boolean;onPress:()=>void;right?:React.ReactNode;indent?:boolean})=>
   <Pressable accessibilityRole="button" accessibilityLabel={label} aria-current={active?'page':undefined} onPress={onPress}
    style={({pressed})=>({minHeight:indent?46:54,flexDirection:'row',alignItems:'center',gap:indent?13:16,paddingLeft:indent?28:16,paddingRight:14,borderRadius:18,

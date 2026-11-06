@@ -23,9 +23,14 @@ export const ease=(curve:readonly number[])=>Easing.bezier(curve[0],curve[1],cur
  * and on close both play backwards before the Modal unmounts (so closing is never an abrupt cut).
  * With reduce-motion the panel only fades. When Soft Motion is off it behaves like the previous Modal.
  */
-export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bottom',legacyAnimation='slide'}:{
+/**
+ * `skipExit`: close at once, without the exit animation. Used when closing hands over to a field elsewhere
+ * (a menu item that opens an editor): while a sheet plays its exit it is still a modal and pulls focus back into
+ * itself, which would close the iPhone keyboard the next field just opened.
+ */
+export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bottom',legacyAnimation='slide',skipExit=false}:{
  visible:boolean;onRequestClose:()=>void;children:React.ReactNode;panelStyle?:StyleProp<ViewStyle>;
- align?:'bottom'|'center';legacyAnimation?:'slide'|'fade';
+ align?:'bottom'|'center';legacyAnimation?:'slide'|'fade';skipExit?:boolean;
 }){
  const {enabled,reduced}=useSoftMotion();
  // «Назад» (swipe / system / header) closes the open sheet first, instead of rolling back the screen under it.
@@ -63,7 +68,7 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
     .start(({finished})=>{if(finished)setMounted(false);});
   }
  },[visible,enabled,reduced]);
- if(!enabled)return <Modal visible={visible} transparent animationType={legacyAnimation} onRequestClose={onRequestClose}>
+ if(!enabled)return <Modal visible={visible} transparent animationType={skipExit&&!visible?'none':legacyAnimation} onRequestClose={onRequestClose}>
   <View style={[{flex:1,backgroundColor:'#0005',justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'},frame]}>
    <Pressable accessibilityLabel="Закрыть" onPress={onRequestClose} style={{position:'absolute',top:0,left:0,right:0,bottom:0}}/>
    <View style={[{width:'100%'},panelStyle]}>{children}</View>
@@ -71,7 +76,9 @@ export function SoftSheet({visible,onRequestClose,children,panelStyle,align='bot
  </Modal>;
  const rise=progress.interpolate({inputRange:[0,1],outputRange:reduced?[0,0]:[align==='bottom'?48:12,0]});
  const scale=progress.interpolate({inputRange:[0,1],outputRange:reduced||align==='bottom'?[1,1]:[0.96,1]});
- return <Modal visible={mounted} transparent animationType="none" onRequestClose={onRequestClose}>
+ // `visible` counts at once (not only after the mount effect): the sheet's fields are in the page in the same render
+ // as the tap that opened it, so an autofocused field gets the keyboard on the first tap (see design/instant).
+ return <Modal visible={visible||mounted&&!skipExit} transparent animationType="none" onRequestClose={onRequestClose}>
   <View style={[{flex:1,justifyContent:align==='bottom'?'flex-end':'center',alignItems:'center'},frame]}>
    <Animated.View pointerEvents="none" style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundColor:'rgba(30,26,34,0.34)',opacity:progress}}/>
    <Pressable accessibilityLabel="Закрыть" onPress={onRequestClose} style={{position:'absolute',top:0,left:0,right:0,bottom:0}}/>

@@ -1,3 +1,4 @@
+import {handoffKeyboard} from '../design/keyboard-handoff';
 import {CalendarContent} from './ShiftCalendar';
 import {useNavDrawer} from '../components/NavDrawer';
 import {HomeHabits} from './HomeHabits';
@@ -129,7 +130,7 @@ function Logo(){
    {/* paddingLeft compensates the trailing letter spacing so the word stays optically centred */}
    <T center size={soft?15:warm?22:minimal?19:18} color={color} style={{fontFamily:'Inter',fontWeight:soft||warm?'300':minimal?'600':'400',letterSpacing:soft?7:warm?6:minimal?2:5,paddingLeft:soft?7:warm?6:minimal?2:5}}>LIFE OS</T>
   </View>
-  <Pressable accessibilityRole="button" accessibilityLabel="Поиск" onPress={()=>router.push('/search')} hitSlop={4}
+  <Pressable accessibilityRole="button" accessibilityLabel="Поиск" onPress={()=>(handoffKeyboard(),router.push('/search'))} hitSlop={4}
    style={({pressed})=>({width:44,height:44,borderRadius:14,alignItems:'center',justifyContent:'center',opacity:pressed?0.7:1})}>
    <Icon name="search" size={21} color={warm?warmSurfaces.icon:color}/>
   </Pressable>
